@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "pint"
+version = "0.1.0"
+description = "A user friendly parser combinator library for python"
+authors = ["Aboo Minister <aboominister@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+black = "^22.3.0"
+flake8 = "^4.0.1"
+flake8-simplify = "^0.19.2"
+flake8-bugbear = "^22.6.22"
+pyright = "^1.1.255"
+flake8-pie = "^0.15.0"
+flake8-builtins = "^1.5.3"
+coverage = "^6.4.1"
+taskipy = "^1.10.2"
+isort = "^5.10.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.taskipy.tasks]
+format = "poetry run isort pint tests && poetry run black pint tests"
+lint = "poetry run flake8 pint tests && poetry run pyright pint tests"
+test = "poetry run pytest"
+coverage = "poetry run coverage run -m pytest"
+
+[tool.flake8]
+max-line-length = 88
+
+[tool.pyright]
+exclude = ["**/node_modules", "**/__pycache__"]
+
+reportAssertAlwaysTrue = "warning"
+reportMissingTypeStubs = "warning"
+reportSelfClsParameterName = "warning"
+reportUnusedExpression = "warning"
+reportWildcardImportFromLibrary = "warning"
+reportUnnecessaryCast = "warning"
+reportUnnecessaryComparison = "warning"
+reportUnnecessaryIsInstance = "warning"
+reportUnusedClass = "warning"
+reportUnusedImport = "warning"
+reportUnusedFunction = "warning"
+reportUnusedVariable = "warning"
