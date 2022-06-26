@@ -28,7 +28,7 @@ Output = TypeVar("Output")
 
 
 class Parser(Generic[Output]):
-    """Wraps a parser and implements combinators for that parser
+    """Wraps a parser and implements combinators
 
     Args:
         parser (ParseFunction[T]): The parsing function.
