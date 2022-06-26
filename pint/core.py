@@ -38,7 +38,7 @@ class Parser(Generic[Output]):
         label (Optional[str]): The label for the parser, used for more descriptive error messages.
     """
 
-    def __init__(self, parser: ParseBuilder[Output]):
+    def __init__(self, parser: ParseFunction[Output]):
         self.parser = parser
         self.label: Optional[str] = None
 
