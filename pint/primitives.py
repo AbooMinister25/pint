@@ -31,11 +31,8 @@ def symbol(expected: str) -> Parser[None]:
 def ident() -> Parser[str]:
     """Parser which accepts an identifier.
 
-    Args:
-        inp (str): The input to parse from.
-
     Returns:
-        ParseResult[str]: A parser which outputs `str`.
+        Parser[str]: A parser which outputs `str`.
 
     Examples:
         >>> from pint import ident

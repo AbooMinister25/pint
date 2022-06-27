@@ -23,6 +23,7 @@ ParseResult = tuple[str, T] | ParseError
 ParseFunction = Callable[[str], ParseResult[T]]
 
 Output = TypeVar("Output")
+MappedOutput = TypeVar("MappedOutput")
 
 
 class Parser(Generic[Output]):
@@ -41,4 +42,35 @@ class Parser(Generic[Output]):
         self.label: Optional[str] = None
 
     def parse(self, input: str) -> ParseResult[Output]:
+        """Parse the given input and return a `ParseResult`
+
+        Args:
+            input (str): The input to parse.
+
+        Returns:
+            ParseResult[Output]: Either a tuple consisting of the remaining input after parsing,
+            and the type of `Output`, or a `ParseError`.
+        """
         return self.parser(input)
+
+    def map(self, function: Callable[[Output], MappedOutput]) -> Parser[MappedOutput]:
+        """Combinator which maps the output of this parser to the output
+        type of `function`.
+
+        Args:
+            function (Callable[[Output], MappedOutput]): The function to apply
+            on the output of this parser.
+
+        Returns:
+            Parser[MappedOutput]: A parser which outputs `MappedOutput`, the
+            output type of `function`.
+        """
+
+        def parser(input: str) -> ParseResult[MappedOutput]:
+            res = self.parse(input)
+            if isinstance(res, ParseError):
+                return res
+
+            return (res[0], function(res[1]))
+
+        return Parser(parser)
