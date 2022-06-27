@@ -43,7 +43,7 @@ def ident() -> Parser[str]:
         ident = ""
 
         if not inp[0].isidentifier():
-            return ParseError(inp, f"Expected an identifier")
+            return ParseError(inp, "Expected an identifier")
 
         for char in inp:
             if char.isidentifier():

@@ -31,9 +31,6 @@ lint = "poetry run flake8 pint tests && poetry run pyright pint tests"
 test = "poetry run pytest"
 coverage = "poetry run coverage run -m pytest"
 
-[tool.flake8]
-max-line-length = 88
-
 [tool.pyright]
 exclude = ["**/node_modules", "**/__pycache__"]
 

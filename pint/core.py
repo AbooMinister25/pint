@@ -12,7 +12,7 @@ class ParseError(Exception):
 
     def __init__(
         self,
-        input: str,
+        inp: str,
         message: Optional[str] = "Error occurred while parsing",
     ):
         super().__init__(message)
@@ -41,7 +41,7 @@ class Parser(Generic[Output]):
         self.parser = parser
         self.label: Optional[str] = None
 
-    def parse(self, input: str) -> ParseResult[Output]:
+    def parse(self, inp: str) -> ParseResult[Output]:
         """Parse the given input and return a `ParseResult`
 
         Args:
@@ -51,9 +51,11 @@ class Parser(Generic[Output]):
             ParseResult[Output]: Either a tuple consisting of the remaining input after parsing,
             and the type of `Output`, or a `ParseError`.
         """
-        return self.parser(input)
+        return self.parser(inp)
 
-    def map(self, function: Callable[[Output], MappedOutput]) -> Parser[MappedOutput]:
+    def map_to(
+        self, function: Callable[[Output], MappedOutput]
+    ) -> Parser[MappedOutput]:
         """Combinator which maps the output of this parser to the output
         type of `function`.
 
@@ -66,8 +68,8 @@ class Parser(Generic[Output]):
             output type of `function`.
         """
 
-        def parser(input: str) -> ParseResult[MappedOutput]:
-            res = self.parse(input)
+        def parser(inp: str) -> ParseResult[MappedOutput]:
+            res = self.parse(inp)
             if isinstance(res, ParseError):
                 return res
 
