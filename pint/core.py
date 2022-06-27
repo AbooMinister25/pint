@@ -1,8 +1,8 @@
 from __future__ import annotations
-from typing import Callable, TypeVar, Optional, Generic
+from typing import Callable, TypeVar, Optional
 
 
-class ParseError(Exception):
+class ParseError:
     """Represents an error that occurred during parsing,
 
     Args:
@@ -13,66 +13,11 @@ class ParseError(Exception):
     def __init__(
         self,
         inp: str,
-        message: Optional[str] = "Error occurred while parsing",
+        message: str = "Error occurred while parsing",
     ):
-        super().__init__(message)
+        self.message = message
 
 
 T = TypeVar("T")
 ParseResult = tuple[str, T] | ParseError
 ParseFunction = Callable[[str], ParseResult[T]]
-
-Output = TypeVar("Output")
-MappedOutput = TypeVar("MappedOutput")
-
-
-class Parser(Generic[Output]):
-    """Wraps a parser and implements combinators
-
-    Args:
-        parser (ParseFunction[T]): The parsing function.
-
-    Attributes:
-        parser (ParseFunction[T]): The function being wrapped.
-        label (Optional[str]): The label for the parser, used for more descriptive error messages.
-    """
-
-    def __init__(self, parser: ParseFunction[Output]):
-        self.parser = parser
-        self.label: Optional[str] = None
-
-    def parse(self, inp: str) -> ParseResult[Output]:
-        """Parse the given input and return a `ParseResult`
-
-        Args:
-            input (str): The input to parse.
-
-        Returns:
-            ParseResult[Output]: Either a tuple consisting of the remaining input after parsing,
-            and the type of `Output`, or a `ParseError`.
-        """
-        return self.parser(inp)
-
-    def map_to(
-        self, function: Callable[[Output], MappedOutput]
-    ) -> Parser[MappedOutput]:
-        """Combinator which maps the output of this parser to the output
-        type of `function`.
-
-        Args:
-            function (Callable[[Output], MappedOutput]): The function to apply
-            on the output of this parser.
-
-        Returns:
-            Parser[MappedOutput]: A parser which outputs `MappedOutput`, the
-            output type of `function`.
-        """
-
-        def parser(inp: str) -> ParseResult[MappedOutput]:
-            res = self.parse(inp)
-            if isinstance(res, ParseError):
-                return res
-
-            return (res[0], function(res[1]))
-
-        return Parser(parser)

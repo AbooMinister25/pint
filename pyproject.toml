@@ -29,7 +29,7 @@ build-backend = "poetry.core.masonry.api"
 format = "poetry run isort pint tests && poetry run black pint tests"
 lint = "poetry run flake8 pint tests && poetry run pyright pint tests"
 test = "poetry run pytest"
-coverage = "poetry run coverage run -m pytest"
+coverage = "poetry run coverage run -m pytest && coverage report -m"
 
 [tool.pyright]
 exclude = ["**/node_modules", "**/__pycache__"]
