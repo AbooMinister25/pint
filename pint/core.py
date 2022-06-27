@@ -20,9 +20,7 @@ class ParseError(Exception):
 
 T = TypeVar("T")
 ParseResult = tuple[str, T] | ParseError
-
 ParseFunction = Callable[[str], ParseResult[T]]
-ParseBuilder = Callable[..., ParseFunction[T]]
 
 Output = TypeVar("Output")
 
