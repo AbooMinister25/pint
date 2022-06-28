@@ -1,4 +1,5 @@
 from __future__ import annotations
+from re import L
 from typing import Callable, TypeVar, Optional, Generic, Any
 from pint.core import ParseResult, ParseFunction, ParseError
 
@@ -73,6 +74,11 @@ class Parser(Generic[Output]):
         Returns:
             Parser[tuple[Output, ThenOutput]]: A parser which returns a tuple
             of the result of this parer and the next one.
+
+        Examples:
+            >>> from pint import symbol, take_while
+            >>> greeting = symbol("Hello").padded_whitespace().then(take_while(lambda c: c.isalpha()))
+            >>> print(greeting.parse("Hello John"))
         """
 
         def parser(inp: str) -> ParseResult[tuple[Output, ThenOutput]]:
@@ -90,6 +96,23 @@ class Parser(Generic[Output]):
         return Parser(parser)
 
     def then_ignore(self, then_p: Parser[Any]) -> Parser[Output]:
+        """Combinator which chains this parser with another one, but
+        ignores the output of the next parser.
+
+        Args:
+            then_p (Parser[Any]): The parser to chain with this one.
+
+        Returns:
+            Parser[Output]: A parser which outputs `Output`, the type
+            of the output of this parser.
+
+        Examples:
+            >>> from pint import take_while
+            >>> name = take_while(lambda c: c.isalpha())
+            >>> first_name = name.padded_whitespace().then_ignore(name)
+            >>> print(first_name.parse("John Doe"))
+        """
+
         def parser(inp: str) -> ParseResult[Output]:
             p = self.then(then_p)
 
@@ -101,8 +124,25 @@ class Parser(Generic[Output]):
 
         return Parser(parser)
 
-    def ignore_then(self, then_p: Parser[Any]) -> Parser[Output]:
-        def parser(inp: str) -> ParseResult[Output]:
+    def ignore_then(self, then_p: Parser[ThenOutput]) -> Parser[ThenOutput]:
+        """Combinator which chains this parser with another one, but
+        ignores the output of this parser.
+
+        Args:
+            then_p (Parser[Any]): The parser to chain with this one.
+
+        Returns:
+            Parser[ThenOutput]: A parser which outputs `ThenOutput`, the type
+            of the output of `then_p`, the parser this parser was chained with.
+
+        Examples:
+            >>> from pint import take_while
+            >>> name = take_while(lambda c: c.isalpha())
+            >>> last_name = name.padded_whitespace().ignore_then(name)
+            >>> print(last_name.parse("John Doe"))
+        """
+
+        def parser(inp: str) -> ParseResult[ThenOutput]:
             p = self.then(then_p)
 
             res = p.parse(inp)
@@ -113,12 +153,72 @@ class Parser(Generic[Output]):
 
         return Parser(parser)
 
-    def padded_whitespace(self) -> Parser[None]:
-        def parser(inp: str) -> ParseResult[None]:
+    def one_or_more(self) -> Parser[list[Output]]:
+        """Parse using this parser one or more times.
+
+        Returns:
+            Parser[list[Output]]: A parser which outputs a list of
+            `Output`s, the output type of this parser.
+        """
+
+        def parser(inp: str) -> ParseResult[list[Output]]:
+            ret: list[Output] = []
+            result = self.parse(inp)
+
+            if isinstance(result, ParseError):
+                return result
+
+            inp, res = result
+            ret.append(res)
+
+            while not isinstance(result, ParseError):
+                result = self.parse(inp)
+                if isinstance(result, ParseError):
+                    return (inp, ret)
+
+                inp, res = result
+                ret.append(res)
+
+            return (inp, ret)
+
+        return Parser(parser)
+
+    def zero_or_more(self) -> Parser[list[Output]]:
+        """Parse using this parser zero or more times.
+
+        Returns:
+            Parser[list[Output]]: A parser which outputs a list of
+            `Output`s, the output type of this parser.
+        """
+
+        def parser(inp: str) -> ParseResult[list[Output]]:
+            ret: list[Output] = []
+            result = self.parse(inp)
+
+            while not isinstance(result, ParseError):
+                inp, res = result
+                ret.append(res)
+                result = self.parse(inp)
+
+            return (inp, ret)
+
+        return Parser(parser)
+
+    def padded_whitespace(self) -> Parser[Output]:
+        """Returns a parser which parses using this parser,
+        but accounts for whitespace on both ends.
+
+        Returns:
+            Parser[Output]: A parser which outputs `Output`, the
+            type of the output of this parser.
+        """
+
+        def parser(inp: str) -> ParseResult[Output]:
             return (
-                take_or_not(" ")
+                symbol(" ")
+                .zero_or_more()
                 .ignore_then(self)
-                .then_ignore(take_or_not(" "))
+                .then_ignore(symbol(" ").zero_or_more())
                 .parse(inp)
             )
 
@@ -238,7 +338,7 @@ def take_or_not(char: str) -> Parser[None]:
     """
 
     def parser(inp: str) -> ParseResult[None]:
-        if inp[0] == char:
+        if inp.startswith(char):
             return (inp[1:], None)
 
         return (inp, None)
