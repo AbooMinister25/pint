@@ -1,5 +1,4 @@
 from __future__ import annotations
-from re import L
 from typing import Callable, TypeVar, Optional, Generic, Any
 from pint.core import ParseResult, ParseFunction, ParseError
 

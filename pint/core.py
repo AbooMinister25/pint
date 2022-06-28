@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, TypeVar, Optional
+from typing import Callable, TypeVar
 
 
 class ParseError:

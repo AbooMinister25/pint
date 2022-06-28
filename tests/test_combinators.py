@@ -45,7 +45,7 @@ def test_one_or_more():
 
 def test_zero_or_more():
     any_a = symbol("a").zero_or_more()
-    
+
     assert not isinstance(any_a.parse("aaaa"), ParseError)
     assert any_a.parse("aaaa") == ("", ["a", "a", "a", "a"])
     assert not isinstance(any_a.parse(""), ParseError)
