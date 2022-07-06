@@ -1,6 +1,9 @@
 from __future__ import annotations
-from typing import Callable, TypeVar, Optional, Generic, Any
-from pint.core import ParseResult, ParseFunction, ParseError
+
+from typing import Any, Callable, Generic, Mapping, Optional, TypeVar
+
+from pint.core import ParseFunction, ParseResult
+from pint.errors import Custom, ParseError, Unclosed, Unexpected
 
 Output = TypeVar("Output")
 MappedOutput = TypeVar("MappedOutput")
@@ -18,9 +21,28 @@ class Parser(Generic[Output]):
         label (Optional[str]): The label for the parser, used for more descriptive error messages.
     """
 
-    def __init__(self, parser: ParseFunction[Output]):
+    def __init__(
+        self,
+        parser: ParseFunction[Output],
+        error_handlers: Optional[
+            Mapping[
+                Unexpected | Unclosed | Custom,
+                Callable[
+                    [
+                        Unexpected | Unclosed | Custom,
+                    ],
+                    ParseError,
+                ],
+            ]
+        ] = None,
+    ):
         self.parser = parser
         self.label: Optional[str] = None
+        self.error_handlers = error_handlers or {
+            Unexpected: self.report_unexpected,
+            Unclosed: self.report_unclosed,
+            Custom: self.report_custom,
+        }
 
     def parse(self, inp: str) -> ParseResult[Output]:
         """Parse the given input and return a `ParseResult`
@@ -31,8 +53,54 @@ class Parser(Generic[Output]):
         Returns:
             ParseResult[Output]: Either a tuple consisting of the remaining input after parsing,
             and the type of `Output`, or a `ParseError`.
+
+        Raises:
+            ParseError: If wrapped parser encountered an error.
         """
-        return self.parser(inp)
+
+        try:
+            return self.parser(inp)
+        except Unexpected as e:
+            raise self.report_unexpected(e)
+        except Unclosed as e:
+            raise self.report_unclosed(e)
+        except Custom as e:
+            raise self.report_custom(e)
+
+    def report_unexpected(self, _e: Unexpected) -> ParseError:
+        """Return a `ParseError` for the `Unexpected` exception.
+
+        Args:
+            _e (Unexpected): The error the `ParseError` is being created for.
+
+        Returns:
+            ParseError: A `ParseError` containing the generated error message for `Unexpected`.
+        """
+        message = f"Expected to find {self.label}" if self.label else "Unexpected input"
+        return ParseError(message)
+
+    def report_unclosed(self, e: Unclosed) -> ParseError:
+        """Return a `ParseError` for the `Unclosed` exception.
+
+        Args:
+            _e (Unclosed): The error the `ParseError` is being created for.
+
+        Returns:
+            ParseError: A `ParseError` containing the generated error message for `Unclosed`.
+        """
+        message = f"Unclosed delimiter {e.unclosed}"
+        return ParseError(message)
+
+    def report_custom(self, e: Custom) -> ParseError:
+        """Return a `ParseError` for the `Custom` exception.
+
+        Args:
+            _e (Custom): The error the `ParseError` is being created for.
+
+        Returns:
+            ParseError: A `ParseError` containing the generated error message for `Custom`.
+        """
+        return ParseError(e.message)
 
     def map_to(
         self, function: Callable[[Output], MappedOutput]
@@ -56,9 +124,6 @@ class Parser(Generic[Output]):
 
         def parser(inp: str) -> ParseResult[MappedOutput]:
             res = self.parse(inp)
-            if isinstance(res, ParseError):
-                return res
-
             return (res[0], function(res[1]))
 
         return Parser(parser)
@@ -76,19 +141,19 @@ class Parser(Generic[Output]):
 
         Examples:
             >>> from pint import symbol, take_while
-            >>> greeting = symbol("Hello").padded_whitespace().then(take_while(lambda c: c.isalpha()))
+            >>> greeting = (
+                symbol("Hello")
+                .padded_whitespace()
+                .then(take_while(lambda c: c.isalpha()))
+            )
             >>> print(greeting.parse("Hello John"))
         """
 
         def parser(inp: str) -> ParseResult[tuple[Output, ThenOutput]]:
             res_1 = self.parse(inp)
-            if isinstance(res_1, ParseError):
-                return res_1
 
             remaining_input, result = res_1
             res_2 = then_p.parse(remaining_input)
-            if isinstance(res_2, ParseError):
-                return res_2
 
             return (res_2[0], (result, res_2[1]))
 
@@ -114,10 +179,7 @@ class Parser(Generic[Output]):
 
         def parser(inp: str) -> ParseResult[Output]:
             p = self.then(then_p)
-
             res = p.parse(inp)
-            if isinstance(res, ParseError):
-                return res
 
             return (res[0], res[1][0])
 
@@ -143,10 +205,7 @@ class Parser(Generic[Output]):
 
         def parser(inp: str) -> ParseResult[ThenOutput]:
             p = self.then(then_p)
-
             res = p.parse(inp)
-            if isinstance(res, ParseError):
-                return res
 
             return (res[0], res[1][1])
 
@@ -161,22 +220,19 @@ class Parser(Generic[Output]):
         """
 
         def parser(inp: str) -> ParseResult[list[Output]]:
-            ret: list[Output] = []
+            # ret: list[Output] = []
             result = self.parse(inp)
-
-            if isinstance(result, ParseError):
-                return result
-
             inp, res = result
-            ret.append(res)
+            # ret.append(res)
+            ret: list[Output] = [res]
 
-            while not isinstance(result, ParseError):
-                result = self.parse(inp)
-                if isinstance(result, ParseError):
-                    return (inp, ret)
-
-                inp, res = result
-                ret.append(res)
+            while True:
+                try:
+                    result = self.parse(inp)
+                    inp, res = result
+                    ret.append(res)
+                except ParseError:
+                    break
 
             return (inp, ret)
 
@@ -192,12 +248,14 @@ class Parser(Generic[Output]):
 
         def parser(inp: str) -> ParseResult[list[Output]]:
             ret: list[Output] = []
-            result = self.parse(inp)
 
-            while not isinstance(result, ParseError):
-                inp, res = result
-                ret.append(res)
-                result = self.parse(inp)
+            while True:
+                try:
+                    result = self.parse(inp)
+                    inp, res = result
+                    ret.append(res)
+                except ParseError:
+                    break
 
             return (inp, ret)
 
@@ -258,7 +316,7 @@ def symbol(expected: str) -> Parser[str]:
         if inp[0 : len(expected)] == expected:
             return (inp[len(expected) :], inp[0 : len(expected)])
         else:
-            return ParseError(inp, f"Expected to find {expected}")
+            raise Unexpected()
 
     return Parser(parser)
 
@@ -277,11 +335,13 @@ def ident() -> Parser[str]:
     def parser(inp: str) -> ParseResult[str]:
         ident = ""
 
-        if not inp[0].isidentifier():
-            return ParseError(inp, "Expected an identifier")
+        if not (inp[0].isalpha() or inp[0] == "_"):
+            raise Unexpected()
 
-        for char in inp:
-            if char.isidentifier():
+        ident += inp[0]
+
+        for char in inp[1:]:
+            if char.isalnum() or char == "_":
                 ident += char
             else:
                 break
@@ -312,7 +372,7 @@ def take_while(function: Callable[[str], bool]) -> Parser[str]:
         ret = ""
 
         if not function(inp[0]):
-            return ParseError(inp, "Invalid input")
+            raise Unexpected()
 
         for char in inp:
             if function(char):
