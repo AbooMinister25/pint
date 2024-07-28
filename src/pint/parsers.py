@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, Mapping, Optional, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Generic, Mapping, Optional, TypeVar
 
-from pint.core import ParseFunction, ParseResult
-from pint.errors import Custom, ParseError, Unclosed, Unexpected
+from pint.errors import CustomError, ParseError, UnclosedError, UnexpectedError
+
+if TYPE_CHECKING:
+    from pint.core import ParseFunction, ParseResult
 
 Output = TypeVar("Output")
 MappedOutput = TypeVar("MappedOutput")
@@ -11,44 +13,57 @@ ThenOutput = TypeVar("ThenOutput")
 
 
 class Parser(Generic[Output]):
-    """Wraps a parser and implements combinators
-
-    Args:
-        parser (ParseFunction[T]): The parsing function.
+    """Wraps a parser and implements combinators.
 
     Attributes:
         parser (ParseFunction[T]): The function being wrapped.
         label (Optional[str]): The label for the parser, used for more descriptive error messages.
     """
 
-    def __init__(
+    def __init__(  # noqa: D417
         self,
         parser: ParseFunction[Output],
         error_handlers: Optional[
             Mapping[
-                Unexpected | Unclosed | Custom,
+                UnexpectedError | UnclosedError | CustomError,
                 Callable[
                     [
-                        Unexpected | Unclosed | Custom,
+                        UnexpectedError | UnclosedError | CustomError,
                     ],
                     ParseError,
                 ],
             ]
         ] = None,
-    ):
+    ) -> None:
+        """Create a parser with a given parsing function and list of error handlers.
+
+        Args:
+            parser (ParseFunction[Output]): The parsing function.
+            error_handlers (Optional[
+                Mapping[
+                    Unexpected | Unclosed | Custom,
+                    Callable[
+                        [
+                            Unexpected | Unclosed | Custom,
+                        ],
+                        ParseError,
+                    ],
+                ]
+            ]): A list of error handlers for this parser. Defaults to None.
+        """
         self.parser = parser
         self.label: Optional[str] = None
         self.error_handlers = error_handlers or {
-            Unexpected: self.report_unexpected,
-            Unclosed: self.report_unclosed,
-            Custom: self.report_custom,
+            UnexpectedError: self.report_unexpected,
+            UnclosedError: self.report_unclosed,
+            CustomError: self.report_custom,
         }
 
     def parse(self, inp: str) -> ParseResult[Output]:
-        """Parse the given input and return a `ParseResult`
+        """Parse the given input and return a `ParseResult`.
 
         Args:
-            input (str): The input to parse.
+            inp (str): The input to parse.
 
         Returns:
             ParseResult[Output]: Either a tuple consisting of the remaining input after parsing,
@@ -57,17 +72,16 @@ class Parser(Generic[Output]):
         Raises:
             ParseError: If wrapped parser encountered an error.
         """
-
         try:
             return self.parser(inp)
-        except Unexpected as e:
-            raise self.report_unexpected(e)
-        except Unclosed as e:
-            raise self.report_unclosed(e)
-        except Custom as e:
-            raise self.report_custom(e)
+        except UnexpectedError as e:
+            raise self.report_unexpected(e) from e
+        except UnclosedError as e:
+            raise self.report_unclosed(e) from e
+        except CustomError as e:
+            raise self.report_custom(e) from e
 
-    def report_unexpected(self, _e: Unexpected) -> ParseError:
+    def report_unexpected(self, _e: UnexpectedError) -> ParseError:
         """Return a `ParseError` for the `Unexpected` exception.
 
         Args:
@@ -79,11 +93,11 @@ class Parser(Generic[Output]):
         message = f"Expected to find {self.label}" if self.label else "Unexpected input"
         return ParseError(message)
 
-    def report_unclosed(self, e: Unclosed) -> ParseError:
+    def report_unclosed(self, e: UnclosedError) -> ParseError:
         """Return a `ParseError` for the `Unclosed` exception.
 
         Args:
-            _e (Unclosed): The error the `ParseError` is being created for.
+            e (Unclosed): The error the `ParseError` is being created for.
 
         Returns:
             ParseError: A `ParseError` containing the generated error message for `Unclosed`.
@@ -91,20 +105,18 @@ class Parser(Generic[Output]):
         message = f"Unclosed delimiter {e.unclosed}"
         return ParseError(message)
 
-    def report_custom(self, e: Custom) -> ParseError:
+    def report_custom(self, e: CustomError) -> ParseError:
         """Return a `ParseError` for the `Custom` exception.
 
         Args:
-            _e (Custom): The error the `ParseError` is being created for.
+            e (Custom): The error the `ParseError` is being created for.
 
         Returns:
             ParseError: A `ParseError` containing the generated error message for `Custom`.
         """
         return ParseError(e.message)
 
-    def map_to(
-        self, function: Callable[[Output], MappedOutput]
-    ) -> Parser[MappedOutput]:
+    def map_to(self, function: Callable[[Output], MappedOutput]) -> Parser[MappedOutput]:
         """Combinator which maps the output of this parser to the output
         type of `function`.
 
@@ -220,10 +232,8 @@ class Parser(Generic[Output]):
         """
 
         def parser(inp: str) -> ParseResult[list[Output]]:
-            # ret: list[Output] = []
             result = self.parse(inp)
             inp, res = result
-            # ret.append(res)
             ret: list[Output] = [res]
 
             while True:
@@ -271,13 +281,7 @@ class Parser(Generic[Output]):
         """
 
         def parser(inp: str) -> ParseResult[Output]:
-            return (
-                symbol(" ")
-                .zero_or_more()
-                .ignore_then(self)
-                .then_ignore(symbol(" ").zero_or_more())
-                .parse(inp)
-            )
+            return symbol(" ").zero_or_more().ignore_then(self).then_ignore(symbol(" ").zero_or_more()).parse(inp)
 
         return Parser(parser)
 
@@ -315,8 +319,7 @@ def symbol(expected: str) -> Parser[str]:
     def parser(inp: str) -> ParseResult[str]:
         if inp[0 : len(expected)] == expected:
             return (inp[len(expected) :], inp[0 : len(expected)])
-        else:
-            raise Unexpected()
+        raise UnexpectedError
 
     return Parser(parser)
 
@@ -336,7 +339,7 @@ def ident() -> Parser[str]:
         ident = ""
 
         if not (inp[0].isalpha() or inp[0] == "_"):
-            raise Unexpected()
+            raise UnexpectedError
 
         ident += inp[0]
 
@@ -372,7 +375,7 @@ def take_while(function: Callable[[str], bool]) -> Parser[str]:
         ret = ""
 
         if not function(inp[0]):
-            raise Unexpected()
+            raise UnexpectedError
 
         for char in inp:
             if function(char):
@@ -387,7 +390,7 @@ def take_while(function: Callable[[str], bool]) -> Parser[str]:
 
 def take_or_not(char: str) -> Parser[None]:
     """Parser which takes a given character if it is found,
-    and if not, returns the given input
+    and if not, returns the given input.
 
     Args:
         char (str): The character to check for.
