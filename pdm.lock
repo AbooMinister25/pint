@@ -6,7 +6,7 @@ groups = ["default", "coverage", "format", "lint", "precommit", "repl", "test"]
 cross_platform = true
 static_urls = false
 lock_version = "4.3"
-content_hash = "sha256:b1ae745c8d4ab5fa57fed972cb87300226d02d666b74dedc5912b42f9774583a"
+content_hash = "sha256:5775637cfa7c36842a920b01a911fb1d06cdda2c90394b17e8f54123adc391c6"
 
 [[package]]
 name = "appnope"
@@ -557,7 +557,6 @@ summary = "Render rich text, tables, progress bars, syntax highlighting, markdow
 dependencies = [
     "commonmark<0.10.0,>=0.9.0",
     "pygments<3.0.0,>=2.6.0",
-    "typing-extensions<5.0,>=4.0.0; python_version < \"3.9\"",
 ]
 files = [
     {file = "rich-12.6.0-py3-none-any.whl", hash = "sha256:a4eb26484f2c82589bd9a17c73d32a010b1e29d89f1604cd9bf3a2097b81bb5e"},
