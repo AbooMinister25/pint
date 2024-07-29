@@ -9,7 +9,7 @@ from typing import Callable, Generic, NamedTuple, TypeAlias, TypeVar
 Input = TypeVar("Input")
 Output = TypeVar("Output")
 ParseResult: TypeAlias = "Result[Input, Output] | Error"
-ParseFunction: TypeAlias = Callable[[Input], ParseResult[Input, Output]]
+ParseFunction: TypeAlias = Callable[[Input], "ParseResult[Input, Output]"]
 
 
 class Error:
@@ -27,7 +27,7 @@ class Error:
 class Result(NamedTuple, Generic[Input, Output]):
     """Holds the result of a parsing function.
 
-    A Result is a tuple consisting of an input of type Input and an output of type
+    A `Result` is a tuple consisting of an input of type Input and an output of type
     Output.
 
     Attributes:
