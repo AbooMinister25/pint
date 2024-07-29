@@ -9,6 +9,7 @@ from typing import Callable, Generic, NamedTuple, TypeAlias, TypeVar
 Input = TypeVar("Input")
 Output = TypeVar("Output")
 ParseResult: TypeAlias = "Result[Input, Output] | Error"
+ParseFunction: TypeAlias = Callable[[Input], ParseResult[Input, Output]]
 
 
 class Error:
@@ -42,14 +43,14 @@ class Parser(Generic[Input, Output]):
     """Wraps a parser function and implements combinators.
 
     Attributes:
-        parser_fn (Callable[[Input], Result[Input, Output]]): The wrapped parsing function.
+        parser_fn (ParseFunction[Input, Output]): The wrapped parsing function.
     """
 
-    def __init__(self, parser_fn: Callable[[Input], ParseResult[Input, Output]]) -> None:
+    def __init__(self, parser_fn: ParseFunction[Input, Output]) -> None:
         """Creates a new Parser with the given parser function.
 
         Args:
-            parser_fn (Callable[[Input], Result[Input, Output]]): The parsing function to wrap.
+            parser_fn (ParseFunction[Input, Output]): The parsing function to wrap.
         """
         self.parser_fn = parser_fn
 
@@ -57,9 +58,21 @@ class Parser(Generic[Input, Output]):
         """Parse the given input with the wrapped parser_fn.
 
         Args:
-            inp (str): _description_
+            inp (str): The input to parse.
 
         Returns:
-            ParseResult[Input, Output]: _description_
+            ParseResult[Input, Output]: The parsed result.
         """
         return self.parser_fn(inp)
+
+
+def parser(parse_fn: ParseFunction[Input, Output]) -> Parser[Input, Output]:
+    """A decorator that creates a parser from the given parse_fn.
+
+    Args:
+        parse_fn (ParseFunction[Input, Output]): The parsing function to wrap.
+
+    Returns:
+        Parser[Input, Output]: The created parser.
+    """
+    return Parser(parse_fn)
