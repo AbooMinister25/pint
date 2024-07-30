@@ -168,13 +168,7 @@ def satisfy(pred: Callable[[T], bool]) -> Parser[Sequence[T], T]:
     Returns:
         Parser[Sequence[T], T]: The created parser.
     """
-
-    def parser_fn(inp: Sequence[T]) -> "ParseResult[Sequence[T], T]":
-        if pred(inp[0]):
-            return Result(inp[1:], inp[0])
-        return Error("Unexpected item.")
-
-    return Parser(parser_fn)
+    return take_any().bind(lambda c: result(c) if pred(c) else fail("Unexpected item."))
 
 
 def take_until(pattern: T) -> Parser[Sequence[T], Sequence[T]]:

@@ -57,6 +57,9 @@ class Result(NamedTuple, Generic[Input, Output]):
     output: Output
 
 
+B = TypeVar("B")
+
+
 class Parser(Generic[Input, Output]):
     """Wraps a parser function and implements combinators.
 
@@ -82,6 +85,23 @@ class Parser(Generic[Input, Output]):
             ParseResult[Input, Output]: The parsed result.
         """
         return self.parser_fn(inp)
+
+    def bind(self, binder: Callable[[Output], Parser[Input, B]]) -> Parser[Input, B]:
+        """Binds this parser with another.
+
+        Returns:
+            _type_: _description_
+        """
+
+        def parser_fn(inp: Input) -> ParseResult[Input, B]:
+            result = self.parse(inp)
+            if isinstance(result, Error):
+                return result
+
+            bound_parser = binder(result.output)
+            return bound_parser.parse(result.input)
+
+        return Parser(parser_fn)
 
 
 T = TypeVar("T")

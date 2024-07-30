@@ -6,6 +6,7 @@ from pint.primitives import (
     none_of,
     one_of,
     result,
+    satisfy,
     take_any,
     take_until,
     zero,
@@ -52,6 +53,14 @@ def test_none_of() -> None:
 def test_take_any() -> None:
     parser = take_any()
     assert parser.parse("a") == Result("", "a")
+
+
+def test_satisfy() -> None:
+    def pred(i: str) -> bool:
+        return i.isdigit()
+
+    parser = satisfy(pred)
+    assert parser.parse("1") == Result("", "1")
 
 
 def test_take_until() -> None:
