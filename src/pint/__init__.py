@@ -89,8 +89,14 @@ class Parser(Generic[Input, Output]):
     def bind(self, binder: Callable[[Output], Parser[Input, B]]) -> Parser[Input, B]:
         """Binds this parser with another.
 
+        `binder` is a function which takes the output of this parser as its only argument
+        and returns a new `Parser[Input, B]`.
+
+        Args:
+            binder (Callable[[Output], Parser[Input, B]]): The binder function.
+
         Returns:
-            _type_: _description_
+            Parser[Input, B]: The new bound parser.
         """
 
         def parser_fn(inp: Input) -> ParseResult[Input, B]:
