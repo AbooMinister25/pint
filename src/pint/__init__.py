@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from functools import wraps
+
+from typing_extensions import ParamSpec
+
 __version__ = "0.1.0"
 
 from typing import Callable, Generic, NamedTuple, TypeAlias, TypeVar
@@ -22,6 +26,20 @@ class Error:
             message (str): The error message.
         """
         self.message = message
+
+    def __eq__(self, other: object) -> bool:
+        """.
+
+        Args:
+            other (Error): _description_
+
+        Returns:
+            bool: _description_
+        """
+        if isinstance(other, Error):
+            return self.message == other.message
+
+        return object.__eq__(self, other)
 
 
 class Result(NamedTuple, Generic[Input, Output]):
@@ -58,7 +76,7 @@ class Parser(Generic[Input, Output]):
         """Parse the given input with the wrapped parser_fn.
 
         Args:
-            inp (str): The input to parse.
+            inp (Input): The input to parse.
 
         Returns:
             ParseResult[Input, Output]: The parsed result.
@@ -66,8 +84,12 @@ class Parser(Generic[Input, Output]):
         return self.parser_fn(inp)
 
 
-def parser(parse_fn: ParseFunction[Input, Output]) -> Parser[Input, Output]:
-    """A decorator that creates a parser from the given parse_fn.
+T = TypeVar("T")
+P = ParamSpec("P")
+
+
+def parser(parse_fn: ParseFunction[Input, Output]) -> Callable[[], Parser[Input, Output]]:
+    """A decorator that creates a parser from the given function.
 
     Args:
         parse_fn (ParseFunction[Input, Output]): The parsing function to wrap.
@@ -75,4 +97,9 @@ def parser(parse_fn: ParseFunction[Input, Output]) -> Parser[Input, Output]:
     Returns:
         Parser[Input, Output]: The created parser.
     """
-    return Parser(parse_fn)
+
+    @wraps(parse_fn)
+    def wrapped() -> Parser[Input, Output]:
+        return Parser(parse_fn)
+
+    return wrapped
