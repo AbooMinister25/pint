@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from functools import wraps
 
-from typing_extensions import ParamSpec
-
 __version__ = "0.1.0"
 
 from typing import Callable, Generic, NamedTuple, TypeAlias, TypeVar
@@ -108,10 +106,6 @@ class Parser(Generic[Input, Output]):
             return bound_parser.parse(result.input)
 
         return Parser(parser_fn)
-
-
-T = TypeVar("T")
-P = ParamSpec("P")
 
 
 def parser(parse_fn: ParseFunction[Input, Output]) -> Callable[[], Parser[Input, Output]]:
