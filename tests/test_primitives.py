@@ -7,6 +7,7 @@ from pint.primitives import (
     one_of,
     result,
     satisfy,
+    take,
     take_any,
     take_until,
     zero,
@@ -31,6 +32,7 @@ def test_fail() -> None:
 def test_just() -> None:
     parse_a = just("a")
     assert parse_a.parse("a") == Result("", "a")
+    assert just("f").parse("foo") == Result("oo", "f")
 
 
 def test_just_str() -> None:
@@ -55,12 +57,18 @@ def test_take_any() -> None:
     assert parser.parse("a") == Result("", "a")
 
 
+def test_take() -> None:
+    parser = take(5)
+    assert parser.parse("hellotheworld") == Result("theworld", "hello")
+
+
 def test_satisfy() -> None:
     def pred(i: str) -> bool:
         return i.isdigit()
 
     parser = satisfy(pred)
     assert parser.parse("1") == Result("", "1")
+    assert parser.parse("1000") == Result("000", "1")
 
 
 def test_take_until() -> None:
