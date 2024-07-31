@@ -1,4 +1,5 @@
-from pint import Error, Result
+from pint import Result
+from pint.parser import Error
 from pint.primitives import (
     fail,
     just,

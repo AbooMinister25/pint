@@ -1,12 +1,13 @@
 from collections.abc import Sequence
 from typing import Any, Callable, TypeVar
 
-from pint import Error, Parser, ParseResult, Result, parser
+from pint import Result
+from pint.parser import Error, Parser, ParseResult, parser
 
 T = TypeVar("T")
 
 
-def result(value: T) -> Parser[Sequence[T], T]:
+def result(value: T) -> Parser[Any, T]:
     """Parser which succeeds without consuming any of the input string,
     and returns the passed value `value`.
 
@@ -23,7 +24,7 @@ def result(value: T) -> Parser[Sequence[T], T]:
         >>> assert always_a.parse("foo") == Result("foo", "a")
     """
 
-    def parser_fn(inp: Sequence[T]) -> "ParseResult[Sequence[T], T]":
+    def parser_fn(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], T]":
         return Result(inp, value)
 
     return Parser(parser_fn)
@@ -42,7 +43,7 @@ def zero(_: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
     return Error("Zero parser.")
 
 
-def fail(message: str) -> Parser[Sequence[Any], Any]:
+def fail(message: str) -> Parser[Any, Any]:
     """Parser which always fails with the given message.
 
     Args:
@@ -72,7 +73,7 @@ def take_any(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
     return Result(inp[1:], inp[0])
 
 
-def take(amount: int) -> Parser[Sequence[Any], Any]:
+def take(amount: int) -> Parser[Any, Any]:
     """A parser that accepts any input for the given amount.
 
     Args:
@@ -88,7 +89,7 @@ def take(amount: int) -> Parser[Sequence[Any], Any]:
     return Parser(parser_fn)
 
 
-def just(expected: T) -> Parser[Sequence[T], T]:
+def just(expected: T) -> Parser[Any, T]:
     """Parser which only accepts the given value.
 
     Args:
@@ -106,7 +107,7 @@ def just(expected: T) -> Parser[Sequence[T], T]:
     return take_any().bind(lambda c: result(c) if c == expected else fail("Unexpected item"))
 
 
-def just_str(expected: str) -> Parser[Sequence[str], str]:
+def just_str(expected: str) -> Parser[str, str]:
     """Parser which matches the given string.
 
     Args:
@@ -126,7 +127,7 @@ def just_str(expected: str) -> Parser[Sequence[str], str]:
     )
 
 
-def one_of(values: Sequence[T]) -> Parser[Sequence[T], T]:
+def one_of(values: Sequence[T]) -> Parser[T, T]:
     """Parser that accepts one of the given input values.
 
     Args:
@@ -139,7 +140,7 @@ def one_of(values: Sequence[T]) -> Parser[Sequence[T], T]:
     return take_any().bind(lambda c: result(c) if c in values else fail("Unexpected item."))
 
 
-def none_of(values: Sequence[T]) -> Parser[Sequence[T], T]:
+def none_of(values: Sequence[T]) -> Parser[T, T]:
     """Parser that accepts a value if it is not one of the given input values.
 
     Args:
@@ -152,7 +153,7 @@ def none_of(values: Sequence[T]) -> Parser[Sequence[T], T]:
     return take_any().bind(lambda c: result(c) if c not in values else fail("Unexpected item."))
 
 
-def satisfy(pred: Callable[[T], bool]) -> Parser[Sequence[T], T]:
+def satisfy(pred: Callable[[T], bool]) -> Parser[T, T]:
     """A parser which accepts any input which satisfies the given predicate
     function.
 
@@ -165,7 +166,7 @@ def satisfy(pred: Callable[[T], bool]) -> Parser[Sequence[T], T]:
     return take_any().bind(lambda c: result(c) if pred(c) else fail("Unexpected item."))
 
 
-def take_until(pattern: T) -> Parser[Sequence[T], Sequence[T]]:
+def take_until(pattern: T) -> Parser[T, Sequence[T]]:
     """Parser that accepts any input until the given pattern is reached.
 
     Args:
