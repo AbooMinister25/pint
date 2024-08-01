@@ -118,6 +118,24 @@ class Parser(Generic[Input, Output]):
 
         return self.bind(lambda res: inner(res))
 
+    def then_ignore(self, then_p: Parser[Input, ThenOutput]) -> Parser[Input, Output]:
+        """Chains this parser with another one, but only returns the output
+        of this parser.
+
+        Args:
+            then_p (Parser[Input, ThenOutput]): The parser to chain with this one.
+
+        Returns:
+            Parser[Input, Output]: A parser which returns the output of this parser.
+
+        Examples:
+            >>> from pint import Result
+            >>> from pint.primitives import just, one_of
+            >>> ignore_underscore = one_of("0123456789").then_ignore(just("_"))
+            >>> assert ignore_underscore.parse("2_") == Result("", "2")
+        """
+        return self.then(then_p).map(lambda r: r[0])
+
     def ignore_then(self, then_p: Parser[Input, ThenOutput]) -> Parser[Input, ThenOutput]:
         """Chains this parser with another one, but only returns the output
         of the other parser.

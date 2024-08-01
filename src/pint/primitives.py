@@ -50,7 +50,7 @@ def fail(message: str) -> Parser[Any, Any]:
         message (str): The input value.
 
     Returns:
-        Parser[Sequence[Any], Any]: A parser which has an input of `Sequence[Any]` and an
+        Parser[Any, Any]: A parser which has an input of `Any` and an
         output of `Any`.
     """
 
@@ -89,14 +89,14 @@ def take(amount: int) -> Parser[Any, Any]:
     return Parser(parser_fn)
 
 
-def just(expected: T) -> Parser[Any, T]:
+def just(expected: T) -> Parser[T, T]:
     """Parser which only accepts the given value.
 
     Args:
         expected (T): The expected value.
 
     Returns:
-        Parser[Any, T]: A parser which has an input of `Sequence[T]` and an
+        Parser[Any, T]: A parser which has an input of `Any` and an
         output of `T`.
 
     Examples:
@@ -114,7 +114,7 @@ def just_str(expected: str) -> Parser[str, str]:
         expected (str): The expected string.
 
     Returns:
-        Parser[str, str]: A parser which has an input of `Sequence[str]` and an
+        Parser[str, str]: A parser which has an input of `str` and an
         output of `str`.
 
     Examples:
@@ -134,7 +134,7 @@ def one_of(values: Sequence[T]) -> Parser[T, T]:
         values (Sequence[T]): The inputs to accept.
 
     Returns:
-        Parser[T, T]: A parser which has an input of `Sequence[T]` and an
+        Parser[T, T]: A parser which has an input of `T` and an
         output of `T`.
     """
     return take_any().bind(lambda c: result(c) if c in values else fail("Unexpected item."))
