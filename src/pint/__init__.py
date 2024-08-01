@@ -1,5 +1,7 @@
 """A user friendly parser combinator library for python."""
 
+from __future__ import annotations
+
 from typing import Callable, Generic, NamedTuple, TypeAlias, TypeVar
 
 __version__ = "0.1.0"

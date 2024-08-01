@@ -6,13 +6,14 @@ from functools import wraps
 from typing import TYPE_CHECKING, Callable, Generic, TypeVar
 
 import pint.primitives
-from pint import Error, Input, Output, ParseFunction, ParseResult
+from pint import Error, Input, Output, ParseFunction, ParseResult, Result
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
 BindOutput = TypeVar("BindOutput")
 MappedOutput = TypeVar("MappedOutput")
+ThenOutput = TypeVar("ThenOutput")
 
 
 class Parser(Generic[Input, Output]):
@@ -84,6 +85,38 @@ class Parser(Generic[Input, Output]):
             >>> assert digits.parse("1") == Result("", 1)
         """
         return self.bind(lambda res: pint.primitives.result(map_fn(res)))
+
+    def then(self, then_p: Parser[Input, ThenOutput]) -> Parser[Input, tuple[Output, ThenOutput]]:
+        """Combinator which chains this parser with another one, returning
+        a parser which returns the outputs of both parsers in a tuple.
+
+        Args:
+            then_p (Parser[Input, ThenOutput]): The parser to chain with this one.
+
+        Returns:
+            Parser[Input, tuple[Output, ThenOutput]]: A parser which returns a tuple of the
+            output of this parser and the output of the next one.
+
+        Examples:
+            >>> from pint import Result
+            >>> from pint.primitives import just, one_of
+            >>> a_and_num = just("a").then(one_of("0123456789"))
+            >>> assert a_and_num.parse("a1") == Result("", ("a", "1"))
+        """
+
+        def inner(value: Output) -> Parser[Input, tuple[Output, ThenOutput]]:
+            def parser_fn(
+                inp: Sequence[Input],
+            ) -> ParseResult[Sequence[Input], tuple[Output, ThenOutput]]:
+                result = then_p.parse(inp)
+                if isinstance(result, Error):
+                    return result
+
+                return Result(result.input, (value, result.output))
+
+            return Parser(parser_fn)
+
+        return self.bind(lambda res: inner(res))
 
 
 def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:
