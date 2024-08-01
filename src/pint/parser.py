@@ -274,6 +274,17 @@ class Parser(Generic[Input, Output]):
         """
         return start.ignore_then(self).then_ignore(end)
 
+    def collect_str(self: Parser[Input, list[str]]) -> Parser[Input, str]:
+        """Collects the result of this parser into a string.
+
+        This function is called when the output of this parser is a list
+        of strings, and needs to be collected into a single string.
+
+        Returns:
+            Parser[Input, str]: A parser which returns a string.
+        """
+        return self.map(lambda s: "".join(s))
+
 
 def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:
     """A decorator that creates a parser from the given function.

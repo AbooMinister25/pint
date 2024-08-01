@@ -99,7 +99,7 @@ def just(expected: T) -> Parser[T, T]:
         expected (T): The expected value.
 
     Returns:
-        Parser[Any, T]: A parser which has an input of `Any` and an
+        Parser[T, T]: A parser which has an input of `Any` and an
         output of `T`.
 
     Examples:
