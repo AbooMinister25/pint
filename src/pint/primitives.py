@@ -15,7 +15,7 @@ def result(value: T) -> Parser[Any, T]:
         value (T): The value to return.
 
     Returns:
-        Parser[Sequence[T], T]: A parser which has an input of `Sequence[T]` and an
+        Parser[Any, T]: A parser which has an input of `Any` and an
         output of `T`.
 
     Examples:
@@ -35,10 +35,10 @@ def zero(_: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
     """Parser which always fails.
 
     Args:
-        _ (Sequence[T]): The input.
+        _ (Sequence[Any]): The input.
 
     Returns:
-        ParseResult[Sequence[T], T]: The result of the parser.
+        ParseResult[Sequence[Any], Any]: The result of the parser.
     """
     return Error("Zero parser.")
 
@@ -80,7 +80,7 @@ def take(amount: int) -> Parser[Any, Any]:
         amount (int): The amount to take.
 
     Returns:
-        Parser[Sequence[T], T]: The created parser.
+        Parser[Any, Any]: The created parser.
     """
 
     def parser_fn(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
@@ -96,7 +96,7 @@ def just(expected: T) -> Parser[Any, T]:
         expected (T): The expected value.
 
     Returns:
-        Parser[Sequence[T], T]: A parser which has an input of `Sequence[T]` and an
+        Parser[Any, T]: A parser which has an input of `Sequence[T]` and an
         output of `T`.
 
     Examples:
@@ -114,7 +114,7 @@ def just_str(expected: str) -> Parser[str, str]:
         expected (str): The expected string.
 
     Returns:
-        Parser[Sequence[str], str]: A parser which has an input of `Sequence[str]` and an
+        Parser[str, str]: A parser which has an input of `Sequence[str]` and an
         output of `str`.
 
     Examples:
@@ -134,7 +134,7 @@ def one_of(values: Sequence[T]) -> Parser[T, T]:
         values (Sequence[T]): The inputs to accept.
 
     Returns:
-        Parser[Sequence[T], T]: A parser which has an input of `Sequence[T]` and an
+        Parser[T, T]: A parser which has an input of `Sequence[T]` and an
         output of `T`.
     """
     return take_any().bind(lambda c: result(c) if c in values else fail("Unexpected item."))
@@ -147,7 +147,7 @@ def none_of(values: Sequence[T]) -> Parser[T, T]:
         values (Sequence[T]): The inputs to check against.
 
     Returns:
-        Parser[Sequence[T], T]: A parser which has an input of `Sequence[T]` and an
+        Parser[T, T]: A parser which has an input of `Sequence[T]` and an
         output of `T`.
     """
     return take_any().bind(lambda c: result(c) if c not in values else fail("Unexpected item."))
@@ -161,7 +161,7 @@ def satisfy(pred: Callable[[T], bool]) -> Parser[T, T]:
         pred (Callable[[T], bool]): The predicate function.
 
     Returns:
-        Parser[Sequence[T], T]: The created parser.
+        Parser[T, T]: The created parser.
     """
     return take_any().bind(lambda c: result(c) if pred(c) else fail("Unexpected item."))
 
@@ -173,7 +173,7 @@ def take_until(pattern: T) -> Parser[T, Sequence[T]]:
         pattern (T): The pattern to check against.
 
     Returns:
-        Parser[Sequence[T], Sequence[T]]: The created parser.
+        Parser[T, Sequence[T]]: The created parser.
     """
 
     def parser_fn(inp: Sequence[T]) -> "ParseResult[Sequence[T], Sequence[T]]":

@@ -19,14 +19,14 @@ class Parser(Generic[Input, Output]):
     """Wraps a parser function and implements combinators.
 
     Attributes:
-        parser_fn (ParseFunction[Input, Output]): The wrapped parsing function.
+        parser_fn (ParseFunction[Sequence[Input], Output]): The wrapped parsing function.
     """
 
     def __init__(self, parser_fn: ParseFunction[Sequence[Input], Output]) -> None:
         """Creates a new Parser with the given parser function.
 
         Args:
-            parser_fn (ParseFunction[Input, Output]): The parsing function to wrap.
+            parser_fn (ParseFunction[Sequence[Input], Output]): The parsing function to wrap.
         """
         self.parser_fn = parser_fn
 
@@ -34,10 +34,10 @@ class Parser(Generic[Input, Output]):
         """Parse the given input with the wrapped parser_fn.
 
         Args:
-            inp (Input): The input to parse.
+            inp (Sequence[Input]): The input to parse.
 
         Returns:
-            ParseResult[Input, Output]: The parsed result.
+            ParseResult[Sequence[Input], Output]: The parsed result.
         """
         return self.parser_fn(inp)
 
@@ -48,13 +48,13 @@ class Parser(Generic[Input, Output]):
         """Binds this parser into another with a binder function.
 
         `binder` is a function which takes the output of this parser as its only argument
-        and returns a new `Parser[Input, B]`.
+        and returns a new `Parser[Input, BindOutput]`.
 
         Args:
-            binder (Callable[[Output], Parser[Input, B]]): The binder function.
+            binder (Callable[[Output], Parser[Input, BindOutput]]): The binder function.
 
         Returns:
-            Parser[Input, B]: The new bound parser.
+            Parser[Input, BindOutput]: The new bound parser.
         """
 
         def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], BindOutput]:
@@ -68,13 +68,20 @@ class Parser(Generic[Input, Output]):
         return Parser(parser_fn)
 
     def map(self, map_fn: Callable[[Output], MappedOutput]) -> Parser[Input, MappedOutput]:
-        """_summary_.
+        """Maps the output of this parser to another value.
 
         Args:
-            map_fn (Callable[[Output], MappedOutput]): _description_
+            map_fn (Callable[[Output], MappedOutput]): The function to call on the
+            output of this parser.
 
         Returns:
-            Parser[Input, MappedOutput]: _description_
+            Parser[Input, MappedOutput]: The new mapped parser.
+
+        Examples:
+            >>> from pint import Result
+            >>> from pint.primitives import one_of
+            >>> digits = one_of("0123456789").map(lambda i: int(i))
+            >>> assert digits.parse("1") == Result("", 1)
         """
         return self.bind(lambda res: pint.primitives.result(map_fn(res)))
 
@@ -83,10 +90,10 @@ def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Par
     """A decorator that creates a parser from the given function.
 
     Args:
-        parse_fn (ParseFunction[Input, Output]): The parsing function to wrap.
+        parse_fn (ParseFunction[Sequence[Input], Output]): The parsing function to wrap.
 
     Returns:
-        Parser[Input, Output]: The created parser.
+        Callable[[], Parser[Input, Output]]: A function which returns the created parser.
     """
 
     @wraps(parse_fn)
