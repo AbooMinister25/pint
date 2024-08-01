@@ -87,7 +87,7 @@ class Parser(Generic[Input, Output]):
         return self.bind(lambda res: pint.primitives.result(map_fn(res)))
 
     def then(self, then_p: Parser[Input, ThenOutput]) -> Parser[Input, tuple[Output, ThenOutput]]:
-        """Combinator which chains this parser with another one, returning
+        """Chains this parser with another one, returning
         a parser which returns the outputs of both parsers in a tuple.
 
         Args:
@@ -117,6 +117,25 @@ class Parser(Generic[Input, Output]):
             return Parser(parser_fn)
 
         return self.bind(lambda res: inner(res))
+
+    def ignore_then(self, then_p: Parser[Input, ThenOutput]) -> Parser[Input, ThenOutput]:
+        """Chains this parser with another one, but only returns the output
+        of the other parser.
+
+        Args:
+            then_p (Parser[Input, ThenOutput]): The parser to chain with this one.
+
+        Returns:
+            Parser[Input, ThenOutput]: A parser which returns the output of the
+            passed `then_p` parser.
+
+        Examples:
+            >>> from pint import Result
+            >>> from pint.primitives import just, one_of
+            >>> ignore_underscore = just("_").ignore_then(one_of("0123456789"))
+            >>> assert ignore_underscore.parse("_2") == Result("", "2")
+        """
+        return self.bind(lambda _: then_p)
 
 
 def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:
