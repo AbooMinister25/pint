@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 BindOutput = TypeVar("BindOutput")
 MappedOutput = TypeVar("MappedOutput")
 ThenOutput = TypeVar("ThenOutput")
+DO1 = TypeVar("DO1")
+DO2 = TypeVar("DO2")
 
 
 class Parser(Generic[Input, Output]):
@@ -155,6 +157,41 @@ class Parser(Generic[Input, Output]):
         """
         return self.bind(lambda _: then_p)
 
+    def alt(self, other: Parser[Input, Output]) -> Parser[Input, Output]:
+        """Returns a parser that invokes this parser, and on failure, invokes
+        `other`.
+
+        If `self` parses successfully, then its output is returned and `other` isn't
+        invoked. If both parsers fail, a combined error message with the failures of
+        both parsers is returned.
+
+        Args:
+            other (Parser[Input, Output]): The other parser to use.
+
+        Returns:
+            Parser[Input, Output]: A parser which takes `Input` and returns `Output`.
+
+        Examples:
+            >>> underscore_or_number = just("_").alt(one_of("0123456789"))
+            >>> assert underscore_or_number.parse("_") == Result("", "_")
+            >>> assert underscore_or_number.parse("1") == Result("", "1")
+        """
+
+        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], Output]:
+            result = self.parse(inp)
+            if isinstance(result, Result):
+                return result
+
+            other_result = other.parse(inp)
+            if isinstance(other_result, Error):
+                message = f"Both parsers returned an error. \
+                    First parser: {result.message}; Second parser: {other_result.message}"
+                return Error(message)
+
+            return other_result
+
+        return Parser(parser_fn)
+
     def repeat(
         self,
         minimum: int = 0,
@@ -211,6 +248,31 @@ class Parser(Generic[Input, Output]):
             return Result(inp, results)
 
         return Parser(parser_fn)
+
+    def delimited(
+        self,
+        start: Parser[Input, DO1],
+        end: Parser[Input, DO2],
+    ) -> Parser[Input, Output]:
+        """Return a parser which delimits this parser with two other parsers.
+
+        The parser `start` is invoked, its output is ignored, then this parser
+        is invoked, and then parser `end` is invoked, and its out is ignored.
+
+        This is equivalent to `start.ignore_then(self).then_ignore(end)`.
+
+        Args:
+            start (Parser[Input, DO1]): The parser which precedes this one.
+            end (Parser[Input, DO2]): The parser which follows this one.
+
+        Returns:
+            Parser[Input, Output]: The generated parser.
+
+        Examples:
+            >>> delim_parens = one_of("0123456789").delimited(just("("), just(")"))
+            >>> assert delim_parens.parse("(1)") == Result("", "1")
+        """
+        return start.ignore_then(self).then_ignore(end)
 
 
 def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:

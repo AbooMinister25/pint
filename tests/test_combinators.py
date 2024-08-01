@@ -37,3 +37,19 @@ def test_repeat() -> None:
     assert between_two_and_four.parse("123") == Result("", ["1", "2", "3"])
     assert between_two_and_four.parse("1234") == Result("", ["1", "2", "3", "4"])
     assert between_two_and_four.parse("12345") == Result("5", ["1", "2", "3", "4"])
+
+
+def test_delimited() -> None:
+    delim_parens = one_of("0123456789").delimited(just("("), just(")"))
+    assert delim_parens.parse("(1)") == Result("", "1")
+
+
+def test_alt() -> None:
+    underscore_or_number = just("_").alt(one_of("0123456789"))
+    assert underscore_or_number.parse("_") == Result("", "_")
+    assert underscore_or_number.parse("1") == Result("", "1")
+    operator = just("+").alt(just("-")).alt(just("*")).alt(just("/"))
+    assert operator.parse("*") == Result("", "*")
+    assert operator.parse("-") == Result("", "-")
+    assert operator.parse("/") == Result("", "/")
+    assert operator.parse("+") == Result("", "+")
