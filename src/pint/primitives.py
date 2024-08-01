@@ -70,7 +70,10 @@ def take_any(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
     Returns:
         ParseResult[Sequence[Any], Any]: The parsed result.
     """
-    return Result(inp[1:], inp[0])
+    try:
+        return Result(inp[1:], inp[0])
+    except IndexError:
+        return Error("Input empty.")
 
 
 def take(amount: int) -> Parser[Any, Any]:

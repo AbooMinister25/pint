@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, Generic, TypeVar
+from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
 import pint.primitives
 from pint import Error, Input, Output, ParseFunction, ParseResult, Result
@@ -154,6 +154,63 @@ class Parser(Generic[Input, Output]):
             >>> assert ignore_underscore.parse("_2") == Result("", "2")
         """
         return self.bind(lambda _: then_p)
+
+    def repeat(
+        self,
+        minimum: int = 0,
+        maximum: Optional[int] = None,
+    ) -> Parser[Input, list[Output]]:
+        """Repeats this parser at least `minimum` times, and at most `maximum` times.
+
+        This returns a parser with all the outputs gathered in a list.
+
+        Args:
+            minimum (int, optional): The minimum number of times to parse. Defaults to 0.
+            maximum (Optional[int], optional): The maximum number of times to parse. Defaults
+            to None.
+
+        Returns:
+            Parser[Input, list[Output]]: A parser which outputs a list of all the outputs
+            generated.
+
+        Examples:
+        >>> digits = one_of("0123456789").repeat()
+        >>> assert digits.parse("123") == Result("", ["1", "2", "3"])
+        >>> two_digits = one_of("0123456789").repeat(maximum=2)
+        >>> assert two_digits.parse("123") == Result("3", ["1", "2"])
+        >>> at_least_one = one_of("0123456789").repeat(minimum=1)
+        >>> assert at_least_one.parse("") == Error("Expected input.")
+        >>> at_least_two = one_of("0123456789").repeat(minimum=2)
+        >>> assert at_least_two.parse("1") == Error("Expected input.")
+        >>> assert at_least_two.parse("123") == Result("", ["1", "2", "3"])
+        >>> between_two_and_four = one_of("0123456789").repeat(minimum=2, maximum=4)
+        >>> assert between_two_and_four.parse("1") == Error("Expected input.")
+        >>> assert between_two_and_four.parse("123") == Result("", ["1", "2", "3"])
+        >>> assert between_two_and_four.parse("1234") == Result("", ["1", "2", "3", "4"])
+        >>> assert between_two_and_four.parse("12345") == Result("5", ["1", "2", "3", "4"])
+
+        """
+
+        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], list[Output]]:
+            results: list[Output] = []
+
+            while True:
+                result = self.parse(inp)
+                if isinstance(result, Error):
+                    break
+
+                results.append(result.output)
+                inp = result.input
+
+                if maximum and len(results) == maximum:
+                    break
+
+            if len(results) < minimum:
+                return Error("Expected input.")
+
+            return Result(inp, results)
+
+        return Parser(parser_fn)
 
 
 def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:
