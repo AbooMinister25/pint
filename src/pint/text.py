@@ -1,5 +1,7 @@
+import string
+
 from pint.parser import Parser
-from pint.primitives import fail, result, take, take_any
+from pint.primitives import fail, one_of, result, take
 
 
 def just_str(expected: str) -> Parser[str, str]:
@@ -23,21 +25,15 @@ def just_str(expected: str) -> Parser[str, str]:
 
 
 def whitespace() -> Parser[str, str]:
-    """.
-
-    Args:
-        inp (Sequence[str]): _description_
+    r"""Parses zero or more whitespace characters.
 
     Returns:
-        ParseResult[Sequence[str], str]: _description_
+        Parser[str, str]: A parser which has an input of `str` and an
+        output of `str`.
+
+    Examples:
+        >>> parser = whitespace()
+        >>> assert parser.parse("foo") == Result("foo", "")
+        >>> assert parser.parse("\t\r\n foo") == Result("foo", "\t\r\n ")
     """
-    return (
-        take_any()
-        .bind(
-            lambda res: result(res)
-            if res in {" ", "\t", "\r", "\n"}
-            else fail("Expected whitespace."),
-        )
-        .repeat()
-        .collect_str()
-    )
+    return one_of(string.whitespace).repeat().collect_str()
