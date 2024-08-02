@@ -1,5 +1,5 @@
 from pint.parser import Parser
-from pint.primitives import fail, result, take
+from pint.primitives import fail, result, take, take_any
 
 
 def just_str(expected: str) -> Parser[str, str]:
@@ -19,4 +19,25 @@ def just_str(expected: str) -> Parser[str, str]:
     """
     return take(len(expected)).bind(
         lambda c: result(c) if c == expected else fail("Unexpected character."),
+    )
+
+
+def whitespace() -> Parser[str, str]:
+    """.
+
+    Args:
+        inp (Sequence[str]): _description_
+
+    Returns:
+        ParseResult[Sequence[str], str]: _description_
+    """
+    return (
+        take_any()
+        .bind(
+            lambda res: result(res)
+            if res in {" ", "\t", "\r", "\n"}
+            else fail("Expected whitespace."),
+        )
+        .repeat()
+        .collect_str()
     )
