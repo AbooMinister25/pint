@@ -284,6 +284,11 @@ class Parser(Generic[Input, Output]):
 
         Returns:
             Parser[Input, str]: A parser which returns a string.
+
+        Examples:
+            >>> number = one_of("0123456789").repeat().collect_str()
+            >>> assert number.parse("532") == Result("", "532")
+            >>> assert number.map(int).parse("532") == Result("", 532)
         """
         return self.map(lambda s: "".join(s))
 
@@ -291,14 +296,23 @@ class Parser(Generic[Input, Output]):
         self: Parser[Input, tuple[FoldA, list[FoldB]]],
         fold_fn: Callable[[FoldA, FoldB], FoldA],
     ) -> Parser[Input, FoldA]:
-        """.
+        """Performs a left fold on the output of this parser.
+
+        This function will only work when the output of this parser is a
+        tuple in the form of `tuple[FoldA, list[FoldB]]`.
 
         Args:
-            self (Parser[Input, tuple[FoldA, Iterable[FoldB]]]): _description_
-            fold_fn (Callable[[FoldA, FoldB], FoldA]): _description_
+            fold_fn (Callable[[FoldA, FoldB], FoldA]): The function to use to combine
+            the outputs.
 
         Returns:
-            Parser[Input, FoldA]: _description_
+            Parser[Input, FoldA]: A parser which has an output of `FoldA`.
+
+        Examples:
+            >>> number = one_of("0123456789").map(int)
+            >>> addition = number.then(just("+").ignore_then(number).repeat()).fold(
+            >>> lambda a, b: a + b)
+            >>> assert addition.parse("5+5") == Result("", 10)
         """
         return self.map(lambda t: functools.reduce(fold_fn, t[1], t[0]))
 
