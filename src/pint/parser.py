@@ -6,7 +6,6 @@ import functools
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
-import pint.primitives
 from pint import Error, Input, Output, ParseFunction, ParseResult, Result
 
 if TYPE_CHECKING:
@@ -89,7 +88,7 @@ class Parser(Generic[Input, Output]):
             >>> digits = one_of("0123456789").map(lambda i: int(i))
             >>> assert digits.parse("1") == Result("", 1)
         """
-        return self.bind(lambda res: pint.primitives.result(map_fn(res)))
+        return self.bind(lambda res: Parser(lambda inp: Result(inp, map_fn(res))))
 
     def then(self, then_p: Parser[Input, ThenOutput]) -> Parser[Input, tuple[Output, ThenOutput]]:
         """Chains this parser with another one, returning
@@ -313,6 +312,10 @@ def seq(*parsers: Parser[Input, object]) -> Parser[Input, list[object]]:
     Returns:
         Parser[Input, list[object]]: A parser which returns a list of the
         outputs of the chained parsers.
+
+    Examples:
+        >>> parser = seq(just_str("hello"), just_str("and"), just_str("bye"))
+        >>> assert parser.parse("helloandbye") == Result("", ["hello", "and", "bye"])
     """
 
     def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], list[object]]:

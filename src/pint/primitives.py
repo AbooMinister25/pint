@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from typing import Any, Callable, TypeVar
 
-from pint import Result
-from pint.parser import Error, Parser, ParseResult, parser
+from pint import Error, Result
+from pint.parser import Parser, ParseResult, parser
 
 T = TypeVar("T")
 
@@ -108,26 +108,6 @@ def just(expected: T) -> Parser[T, T]:
         >>> assert parse_a.parse("a") == Result("", "a")
     """
     return take_any().bind(lambda c: result(c) if c == expected else fail("Unexpected item"))
-
-
-def just_str(expected: str) -> Parser[str, str]:
-    """Parser which matches the given string.
-
-    Args:
-        expected (str): The expected string.
-
-    Returns:
-        Parser[str, str]: A parser which has an input of `str` and an
-        output of `str`.
-
-    Examples:
-        >>> from pint.primitives import just_str
-        >>> parse_test = just_str("test")
-        >>> assert parse_test.parse("test") == Result("", "test")
-    """
-    return take(len(expected)).bind(
-        lambda c: result(c) if c == expected else fail("Unexpected character."),
-    )
 
 
 def one_of(values: Sequence[T]) -> Parser[T, T]:

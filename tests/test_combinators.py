@@ -1,6 +1,7 @@
 from pint import Result
 from pint.parser import seq
-from pint.primitives import just, just_str, one_of
+from pint.primitives import just, one_of
+from pint.text import just_str
 
 
 def test_map() -> None:

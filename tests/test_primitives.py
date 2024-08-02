@@ -1,9 +1,7 @@
-from pint import Result
-from pint.parser import Error
+from pint import Error, Result
 from pint.primitives import (
     fail,
     just,
-    just_str,
     none_of,
     one_of,
     result,
@@ -34,11 +32,6 @@ def test_just() -> None:
     parse_a = just("a")
     assert parse_a.parse("a") == Result("", "a")
     assert just("f").parse("foo") == Result("oo", "f")
-
-
-def test_just_str() -> None:
-    parse_test = just_str("test")
-    assert parse_test.parse("test") == Result("", "test")
 
 
 def test_one_of() -> None:
