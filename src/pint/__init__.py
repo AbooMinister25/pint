@@ -7,7 +7,7 @@ from typing import Callable, Generic, NamedTuple, TypeAlias, TypeVar
 __version__ = "0.1.0"
 
 Input = TypeVar("Input")
-Output = TypeVar("Output")
+Output = TypeVar("Output", covariant=True)
 ParseResult: TypeAlias = "Result[Input, Output] | Error"
 ParseFunction: TypeAlias = Callable[[Input], "ParseResult[Input, Output]"]
 
@@ -24,7 +24,7 @@ class Error:
         self.message = message
 
     def __eq__(self, other: object) -> bool:
-        """.
+        """If other is an Error, compare messages for equality.
 
         Args:
             other (Error): _description_
@@ -36,6 +36,22 @@ class Error:
             return self.message == other.message
 
         return object.__eq__(self, other)
+
+    def __str__(self) -> str:
+        """Return error message.
+
+        Returns:
+            str: The error message.
+        """
+        return self.message
+
+    def __repr__(self) -> str:
+        """Return error message.
+
+        Returns:
+            str: The error message.
+        """
+        return f"Error {self.__class__} with message: {self.message}"
 
 
 class Result(NamedTuple, Generic[Input, Output]):

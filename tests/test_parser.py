@@ -1,5 +1,5 @@
 from pint import Error, Result
-from pint.primitives import one_of
+from pint.primitives import just, one_of
 
 
 def test_repeat() -> None:
@@ -23,3 +23,9 @@ def test_collect_str() -> None:
     number = one_of("0123456789").repeat().collect_str()
     assert number.parse("532") == Result("", "532")
     assert number.map(int).parse("532") == Result("", 532)
+
+
+def test_fold() -> None:
+    number = one_of("0123456789").map(int)
+    addition = number.then(just("+").ignore_then(number).repeat()).fold(lambda a, b: a + b)
+    assert addition.parse("5+5") == Result("", 10)

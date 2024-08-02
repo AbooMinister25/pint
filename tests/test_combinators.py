@@ -1,5 +1,6 @@
 from pint import Result
-from pint.primitives import just, one_of
+from pint.parser import seq
+from pint.primitives import just, just_str, one_of
 
 
 def test_map() -> None:
@@ -36,3 +37,8 @@ def test_alt() -> None:
     assert operator.parse("-") == Result("", "-")
     assert operator.parse("/") == Result("", "/")
     assert operator.parse("+") == Result("", "+")
+
+
+def test_seq() -> None:
+    parser = seq(just_str("hello"), just_str("and"), just_str("bye"))
+    assert parser.parse("helloandbye") == Result("", ["hello", "and", "bye"])

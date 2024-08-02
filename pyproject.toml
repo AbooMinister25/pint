@@ -6,10 +6,7 @@ authors = [
     { name = "AbooMinister25", email = "aboominister@gmail.com" },
     { name = "Aboo Minister", email = "aboominister@gmail.com" },
 ]
-dependencies = [
-    "rich<13.0.0,>=12.4.4",
-    "typing-extensions>=4.12.2",
-]
+dependencies = ["rich<13.0.0,>=12.4.4", "typing-extensions>=4.12.2"]
 requires-python = ">=3.9,<4.0"
 readme = "README.md"
 license = { text = "MIT" }
@@ -58,7 +55,7 @@ reportUnusedVariable = "warning"
 
 [tool.ruff]
 select = ["ALL"]
-ignore = ["E203", "D100", "D103", "D205", "PERF203", "UP007"]
+ignore = ["E203", "D100", "D103", "D205", "PERF203", "UP007", "PLC0105"]
 line-length = 100
 
 [tool.ruff.lint.per-file-ignores]

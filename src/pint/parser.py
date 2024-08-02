@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
@@ -16,6 +17,8 @@ MappedOutput = TypeVar("MappedOutput")
 ThenOutput = TypeVar("ThenOutput")
 DO1 = TypeVar("DO1")
 DO2 = TypeVar("DO2")
+FoldA = TypeVar("FoldA")
+FoldB = TypeVar("FoldB")
 
 
 class Parser(Generic[Input, Output]):
@@ -284,6 +287,46 @@ class Parser(Generic[Input, Output]):
             Parser[Input, str]: A parser which returns a string.
         """
         return self.map(lambda s: "".join(s))
+
+    def fold(
+        self: Parser[Input, tuple[FoldA, list[FoldB]]],
+        fold_fn: Callable[[FoldA, FoldB], FoldA],
+    ) -> Parser[Input, FoldA]:
+        """.
+
+        Args:
+            self (Parser[Input, tuple[FoldA, Iterable[FoldB]]]): _description_
+            fold_fn (Callable[[FoldA, FoldB], FoldA]): _description_
+
+        Returns:
+            Parser[Input, FoldA]: _description_
+        """
+        return self.map(lambda t: functools.reduce(fold_fn, t[1], t[0]))
+
+
+def seq(*parsers: Parser[Input, object]) -> Parser[Input, list[object]]:
+    """Chain the passed parsers and return a list of all their outputs.
+
+    This can be used in place of `Parser.then` to avoid the nested tuples
+    that occur from repeatedly chaining `Parser.then`.
+
+    Returns:
+        Parser[Input, list[object]]: A parser which returns a list of the
+        outputs of the chained parsers.
+    """
+
+    def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], list[object]]:
+        results: list[object] = []
+        for parser in parsers:
+            result = parser.parse(inp)
+            if isinstance(result, Error):
+                return result
+            results.append(result[1])
+            inp = result[0]
+
+        return Result(inp, results)
+
+    return Parser(parser_fn)
 
 
 def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:
