@@ -18,6 +18,7 @@ DO1 = TypeVar("DO1")
 DO2 = TypeVar("DO2")
 FoldA = TypeVar("FoldA")
 FoldB = TypeVar("FoldB")
+PadOutput = TypeVar("PadOutput")
 
 
 class Parser(Generic[Input, Output]):
@@ -276,22 +277,6 @@ class Parser(Generic[Input, Output]):
         """
         return start.ignore_then(self).then_ignore(end)
 
-    def collect_str(self: Parser[Input, list[str]]) -> Parser[Input, str]:
-        """Collects the result of this parser into a string.
-
-        This function is called when the output of this parser is a list
-        of strings, and needs to be collected into a single string.
-
-        Returns:
-            Parser[Input, str]: A parser which returns a string.
-
-        Examples:
-            >>> number = one_of("0123456789").repeat().collect_str()
-            >>> assert number.parse("532") == Result("", "532")
-            >>> assert number.map(int).parse("532") == Result("", 532)
-        """
-        return self.map(lambda s: "".join(s))
-
     def fold(
         self: Parser[Input, tuple[FoldA, list[FoldB]]],
         fold_fn: Callable[[FoldA, FoldB], FoldA],
@@ -315,6 +300,52 @@ class Parser(Generic[Input, Output]):
             >>> assert addition.parse("5+5") == Result("", 10)
         """
         return self.map(lambda t: functools.reduce(fold_fn, t[1], t[0]))
+
+    def optional(self) -> Parser[Input, Optional[Output]]:
+        """Makes this parser optional.
+
+        Returns `None` if this parser returns an error.
+
+        Returns:
+            Parser[Input, Optional[Output]]: A parser which outputs `Output | None`.
+        """
+
+        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], Optional[Output]]:
+            result = self.parse(inp)
+            return Result(inp, None) if isinstance(result, Error) else result
+
+        return Parser(parser_fn)
+
+    def padded(self, padding: Parser[Input, PadOutput]) -> Parser[Input, Output]:
+        """Pads this parser on either side with the given parser.
+
+        This returns a parser which accepts `padding` either preceding or following
+        the input.
+
+        Args:
+            padding (Parser[Input, PadOutput]): The parser to look for on either side
+            of this one.
+
+        Returns:
+            Parser[Input, Output]: A parser which returns `Output`.
+        """
+        return self.delimited(padding.optional(), padding.optional())
+
+    def collect_str(self: Parser[Input, list[str]]) -> Parser[Input, str]:
+        """Collects the result of this parser into a string.
+
+        This function is called when the output of this parser is a list
+        of strings, and needs to be collected into a single string.
+
+        Returns:
+            Parser[Input, str]: A parser which returns a string.
+
+        Examples:
+            >>> number = one_of("0123456789").repeat().collect_str()
+            >>> assert number.parse("532") == Result("", "532")
+            >>> assert number.map(int).parse("532") == Result("", 532)
+        """
+        return self.map(lambda s: "".join(s))
 
 
 def seq(*parsers: Parser[Input, object]) -> Parser[Input, list[object]]:

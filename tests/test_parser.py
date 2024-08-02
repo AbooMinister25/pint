@@ -29,3 +29,9 @@ def test_fold() -> None:
     number = one_of("0123456789").map(int)
     addition = number.then(just("+").ignore_then(number).repeat()).fold(lambda a, b: a + b)
     assert addition.parse("5+5") == Result("", 10)
+
+
+def test_optional() -> None:
+    parser = just("-").optional().then(one_of("0123456789").repeat().collect_str())
+    assert parser.parse("-10") == Result("", ("-", "10"))
+    assert parser.parse("10") == Result("", (None, "10"))

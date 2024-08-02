@@ -43,3 +43,10 @@ def test_alt() -> None:
 def test_seq() -> None:
     parser = seq(just_str("hello"), just_str("and"), just_str("bye"))
     assert parser.parse("helloandbye") == Result("", ["hello", "and", "bye"])
+
+
+def test_padded() -> None:
+    parser = just_str("test").padded(just("*"))
+    assert parser.parse("*test*") == Result("", "test")
+    assert parser.parse("*test") == Result("", "test")
+    assert parser.parse("test*") == Result("", "test")
