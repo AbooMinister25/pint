@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any, Callable, TypeVar
 
-from pint import Error, Result
+from pint import Error, InputStream, Result
 from pint.parser import Parser, ParseResult, parser
 
 T = TypeVar("T")
@@ -24,21 +24,21 @@ def result(value: T) -> Parser[Any, T]:
         >>> assert always_a.parse("foo") == Result("foo", "a")
     """
 
-    def parser_fn(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], T]":
+    def parser_fn(inp: InputStream[Any]) -> "ParseResult[Any, T]":
         return Result(inp, value)
 
     return Parser(parser_fn)
 
 
 @parser
-def zero(_: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
+def zero(_: InputStream[Any]) -> "ParseResult[Any, Any]":
     """Parser which always fails.
 
     Args:
-        _ (Sequence[Any]): The input.
+        _ (InputStream[Any]): The input.
 
     Returns:
-        ParseResult[Sequence[Any], Any]: The result of the parser.
+        ParseResult[Any], Any]: The result of the parser.
     """
     return Error("Zero parser.")
 
@@ -54,24 +54,25 @@ def fail(message: str) -> Parser[Any, Any]:
         output of `Any`.
     """
 
-    def parser_fn(_: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
+    def parser_fn(_: InputStream[Any]) -> "ParseResult[Any, Any]":
         return Error(message)
 
     return Parser(parser_fn)
 
 
 @parser
-def take_any(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
+def take_any(inp: InputStream[Any]) -> "ParseResult[Any, Any]":
     """A parser that accepts any input.
 
     Args:
-        inp (Sequence[Any]): The input to parse.
+        inp (InputStream[Any]): The input to parse.
 
     Returns:
-        ParseResult[Sequence[Any], Any]: The parsed result.
+        ParseResult[Any, Any]: The parsed result.
     """
     try:
-        return Result(inp[1:], inp[0])
+        taken, remaining = inp.take(1)
+        return Result(remaining, taken)
     except IndexError:
         return Error("Input empty.")
 
@@ -86,8 +87,9 @@ def take(amount: int) -> Parser[Any, Any]:
         Parser[Any, Any]: The created parser.
     """
 
-    def parser_fn(inp: Sequence[Any]) -> "ParseResult[Sequence[Any], Any]":
-        return Result(inp[amount:], inp[:amount])
+    def parser_fn(inp: InputStream[Any]) -> "ParseResult[Any, Any]":
+        taken, remaining = inp.take(amount)
+        return Result(remaining, taken)
 
     return Parser(parser_fn)
 
@@ -107,7 +109,7 @@ def just(expected: T) -> Parser[T, T]:
         >>> parse_a = just("a")
         >>> assert parse_a.parse("a") == Result("", "a")
     """
-    return take_any().bind(lambda c: result(c) if c == expected else fail("Unexpected item"))
+    return take_any().bind(lambda c: result(c) if c == expected else fail(f"Unexpected item {c}"))
 
 
 def one_of(values: Sequence[T]) -> Parser[T, T]:
@@ -130,7 +132,7 @@ def none_of(values: Sequence[T]) -> Parser[T, T]:
         values (Sequence[T]): The inputs to check against.
 
     Returns:
-        Parser[T, T]: A parser which has an input of `Sequence[T]` and an
+        Parser[T, T]: A parser which has an input of `T` and an
         output of `T`.
     """
     return take_any().bind(lambda c: result(c) if c not in values else fail("Unexpected item."))
@@ -159,7 +161,7 @@ def take_until(pattern: T) -> Parser[T, Sequence[T]]:
         Parser[T, Sequence[T]]: The created parser.
     """
 
-    def parser_fn(inp: Sequence[T]) -> "ParseResult[Sequence[T], Sequence[T]]":
+    def parser_fn(inp: InputStream[T]) -> "ParseResult[T, Sequence[T]]":
         try:
             location = inp.index(pattern)
             return take(location).parse(inp)

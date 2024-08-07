@@ -6,10 +6,10 @@ import functools
 from functools import wraps
 from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
-from pint import Error, Input, Output, ParseFunction, ParseResult, Result
+from pint import Error, Input, InputStream, Output, ParseFunction, ParseResult, Result
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
 BindOutput = TypeVar("BindOutput")
 MappedOutput = TypeVar("MappedOutput")
@@ -25,26 +25,29 @@ class Parser(Generic[Input, Output]):
     """Wraps a parser function and implements combinators.
 
     Attributes:
-        parser_fn (ParseFunction[Sequence[Input], Output]): The wrapped parsing function.
+        parser_fn (ParseFunction[Input, Output]): The wrapped parsing function.
     """
 
-    def __init__(self, parser_fn: ParseFunction[Sequence[Input], Output]) -> None:
+    def __init__(self, parser_fn: ParseFunction[Input, Output]) -> None:
         """Creates a new Parser with the given parser function.
 
         Args:
-            parser_fn (ParseFunction[Sequence[Input], Output]): The parsing function to wrap.
+            parser_fn (ParseFunction[Input, Output]): The parsing function to wrap.
         """
         self.parser_fn = parser_fn
 
-    def parse(self, inp: Sequence[Input]) -> ParseResult[Sequence[Input], Output]:
+    def parse(self, inp: InputStream[Input] | Sequence[Input]) -> ParseResult[Input, Output]:
         """Parse the given input with the wrapped parser_fn.
 
         Args:
-            inp (Sequence[Input]): The input to parse.
+            inp (InputStream[Input] | Sequence[Input]): The input to parse.
 
         Returns:
-            ParseResult[Sequence[Input], Output]: The parsed result.
+            ParseResult[Input, Output]: The parsed result.
         """
+        if not isinstance(inp, InputStream):
+            inp = InputStream(inp)
+
         return self.parser_fn(inp)
 
     def bind(
@@ -63,7 +66,7 @@ class Parser(Generic[Input, Output]):
             Parser[Input, BindOutput]: The new bound parser.
         """
 
-        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], BindOutput]:
+        def parser_fn(inp: InputStream[Input]) -> ParseResult[Input, BindOutput]:
             result = self.parse(inp)
             if isinstance(result, Error):
                 return result
@@ -111,8 +114,8 @@ class Parser(Generic[Input, Output]):
 
         def inner(value: Output) -> Parser[Input, tuple[Output, ThenOutput]]:
             def parser_fn(
-                inp: Sequence[Input],
-            ) -> ParseResult[Sequence[Input], tuple[Output, ThenOutput]]:
+                inp: InputStream[Input],
+            ) -> ParseResult[Input, tuple[Output, ThenOutput]]:
                 result = then_p.parse(inp)
                 if isinstance(result, Error):
                     return result
@@ -180,7 +183,7 @@ class Parser(Generic[Input, Output]):
             >>> assert underscore_or_number.parse("1") == Result("", "1")
         """
 
-        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], Output]:
+        def parser_fn(inp: InputStream[Input]) -> ParseResult[Input, Output]:
             result = self.parse(inp)
             if isinstance(result, Result):
                 return result
@@ -231,7 +234,7 @@ class Parser(Generic[Input, Output]):
 
         """
 
-        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], list[Output]]:
+        def parser_fn(inp: InputStream[Input]) -> ParseResult[Input, list[Output]]:
             results: list[Output] = []
 
             while True:
@@ -310,7 +313,7 @@ class Parser(Generic[Input, Output]):
             Parser[Input, Optional[Output]]: A parser which outputs `Output | None`.
         """
 
-        def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], Optional[Output]]:
+        def parser_fn(inp: InputStream[Input]) -> ParseResult[Input, Optional[Output]]:
             result = self.parse(inp)
             return Result(inp, None) if isinstance(result, Error) else result
 
@@ -352,7 +355,7 @@ def seq(*parsers: Parser[Input, object]) -> Parser[Input, list[object]]:
     """Chain the passed parsers and return a list of all their outputs.
 
     This can be used in place of `Parser.then` to avoid the nested tuples
-    that occur from repeatedly chaining `Parser.then`.
+    that occur from repeatedly chaining it.
 
     Returns:
         Parser[Input, list[object]]: A parser which returns a list of the
@@ -363,7 +366,7 @@ def seq(*parsers: Parser[Input, object]) -> Parser[Input, list[object]]:
         >>> assert parser.parse("helloandbye") == Result("", ["hello", "and", "bye"])
     """
 
-    def parser_fn(inp: Sequence[Input]) -> ParseResult[Sequence[Input], list[object]]:
+    def parser_fn(inp: InputStream[Input]) -> ParseResult[Input, list[object]]:
         results: list[object] = []
         for parser in parsers:
             result = parser.parse(inp)
@@ -377,11 +380,11 @@ def seq(*parsers: Parser[Input, object]) -> Parser[Input, list[object]]:
     return Parser(parser_fn)
 
 
-def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Parser[Input, Output]]:
+def parser(parse_fn: ParseFunction[Input, Output]) -> Callable[[], Parser[Input, Output]]:
     """A decorator that creates a parser from the given function.
 
     Args:
-        parse_fn (ParseFunction[Sequence[Input], Output]): The parsing function to wrap.
+        parse_fn (ParseFunction[Input, Output]): The parsing function to wrap.
 
     Returns:
         Callable[[], Parser[Input, Output]]: A function which returns the created parser.
@@ -392,3 +395,28 @@ def parser(parse_fn: ParseFunction[Sequence[Input], Output]) -> Callable[[], Par
         return Parser(parse_fn)
 
     return wrapped
+
+
+# TODO: Fix type hints and implementation of this.
+def generate(
+    parsers: Callable[
+        [],
+        Generator[Parser[Input, Output], ParseResult[Input, Output] | None, None],
+    ],
+) -> Parser[Input, Output]:
+    @wraps(parsers)
+    def parser_fn(inp: InputStream[Input]) -> ParseResult[Input, Output]:
+        gen = parsers()
+        value = None
+        while True:
+            try:
+                parser = gen.send(value)
+                result = parser.parse(inp)
+                if isinstance(result, Error):
+                    return result
+                inp = result.input
+                value = result
+            except StopIteration as e:
+                return e.value
+
+    return Parser(parser_fn)
