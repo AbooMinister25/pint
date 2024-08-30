@@ -7,6 +7,7 @@ from functools import wraps
 from typing import TYPE_CHECKING, Callable, Generic, Optional, TypeVar
 
 from pint import Error, Input, InputStream, Output, ParseFunction, ParseResult, Result
+from pint.errors import CustomError, Span
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
@@ -191,8 +192,8 @@ class Parser(Generic[Input, Output]):
             other_result = other.parse(inp)
             if isinstance(other_result, Error):
                 message = f"Both parsers returned an error. \
-                    First parser: {result.message}; Second parser: {other_result.message}"
-                return Error(message)
+                    First parser: {result}; Second parser: {other_result}"
+                return CustomError(message, Span(result.span.start, other_result.span.end), "alt")
 
             return other_result
 
@@ -249,7 +250,7 @@ class Parser(Generic[Input, Output]):
                     break
 
             if len(results) < minimum:
-                return Error("Expected input.")
+                return CustomError("Expected input.", Span(inp.position, inp.position + 1))
 
             return Result(inp, results)
 

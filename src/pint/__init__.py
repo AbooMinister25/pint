@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Callable, Generic, NamedTuple, TypeAlias, TypeVar
 
+from errors import Error
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -15,48 +17,6 @@ Input = TypeVar("Input")
 Output = TypeVar("Output", covariant=True)
 ParseResult: TypeAlias = "Result[InputStream[Input], Output] | Error"
 ParseFunction: TypeAlias = Callable[["InputStream[Input]"], "ParseResult[Input, Output]"]
-
-
-class Error:
-    """The default error type. It only contains an error message."""
-
-    def __init__(self, message: str) -> None:
-        """Creates a new Error.
-
-        Args:
-            message (str): The error message.
-        """
-        self.message = message
-
-    def __eq__(self, other: object) -> bool:
-        """If other is an Error, compare messages for equality.
-
-        Args:
-            other (Error): _description_
-
-        Returns:
-            bool: _description_
-        """
-        if isinstance(other, Error):
-            return self.message == other.message
-
-        return object.__eq__(self, other)
-
-    def __str__(self) -> str:
-        """Return error message.
-
-        Returns:
-            str: The error message.
-        """
-        return self.message
-
-    def __repr__(self) -> str:
-        """Return error message.
-
-        Returns:
-            str: The error message.
-        """
-        return f"Error {self.__class__} with message: {self.message}"
 
 
 class Result(NamedTuple, Generic[Input, Output]):

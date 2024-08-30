@@ -1,4 +1,5 @@
-from pint import Error, Result
+from pint import Result
+from pint.errors import CustomError, Span, UnexpectedError
 from pint.primitives import (
     fail,
     just,
@@ -20,12 +21,12 @@ def test_result() -> None:
 
 def test_zero() -> None:
     parser = zero()
-    assert parser.parse("test") == Error("Zero parser.")
+    assert parser.parse("test") == CustomError("Zero parser.", Span(0, 1))
 
 
 def test_fail() -> None:
     parser = fail("Oh no.")
-    assert parser.parse("test") == Error("Oh no.")
+    assert parser.parse("test") == CustomError("Oh no.", Span(0, 1))
 
 
 def test_just() -> None:
@@ -37,7 +38,7 @@ def test_just() -> None:
 def test_one_of() -> None:
     digits = one_of("123456789")
     assert digits.parse("5") == Result("", "5")
-    assert digits.parse("0") == Error("Unexpected item.")
+    assert digits.parse("0") == UnexpectedError("0", Span(0, 1))
 
 
 def test_none_of() -> None:

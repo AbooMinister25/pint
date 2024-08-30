@@ -82,7 +82,7 @@ class ExpectedError(Error, Generic[T]):
 class UnclosedError(Error, Generic[T]):
     """Error that's created when a parser encounters an unclosed delimiter."""
 
-    def __init__(self, delimiter: T, span: Span, label: str) -> None:
+    def __init__(self, delimiter: T, span: Span, label: Optional[str] = None) -> None:
         """Creates a new UnclosedError.
 
         Args:
@@ -102,7 +102,7 @@ class UnclosedError(Error, Generic[T]):
 class UnexpectedError(Error, Generic[T]):
     """Error that's created when a parser encounters an unexpected item."""
 
-    def __init__(self, found: T, span: Span, label: str) -> None:
+    def __init__(self, found: T, span: Span, label: Optional[str] = None) -> None:
         """Creates a new UnexpectedError.
 
         Args:
@@ -122,7 +122,7 @@ class UnexpectedError(Error, Generic[T]):
 class CustomError(Error):
     """An error that's created with a custom error message.."""
 
-    def __init__(self, message: str, span: Span, label: str) -> None:
+    def __init__(self, message: str, span: Span, label: Optional[str] = None) -> None:
         """Creates a new CustomError.
 
         Args:

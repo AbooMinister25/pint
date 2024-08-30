@@ -1,7 +1,7 @@
 import string
 
 from pint.parser import Parser
-from pint.primitives import fail, one_of, result, take
+from pint.primitives import one_of, result, take, unexpected
 
 
 def just_str(expected: str) -> Parser[str, str]:
@@ -20,7 +20,7 @@ def just_str(expected: str) -> Parser[str, str]:
         >>> assert parse_test.parse("test") == Result("", "test")
     """
     return take(len(expected)).bind(
-        lambda c: result(c) if c == expected else fail("Unexpected character."),
+        lambda c: result(c) if c == expected else unexpected("Unexpected character."),
     )
 
 
