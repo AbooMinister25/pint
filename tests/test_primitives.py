@@ -1,18 +1,74 @@
-from pint import ident, symbol, take_while
+from pint import Result
+from pint.errors import CustomError, Span, UnexpectedError
+from pint.primitives import (
+    fail,
+    just,
+    none_of,
+    one_of,
+    result,
+    satisfy,
+    take,
+    take_any,
+    take_until,
+    zero,
+)
 
 
-def test_symbol() -> None:
-    parse_a = symbol("a")
-    assert parse_a.parse("a") == ("", "a")
+def test_result() -> None:
+    always_a = result("a")
+    assert always_a.parse("foo") == Result("foo", "a")
 
 
-def test_identifier() -> None:
-    assert ident().parse("foo") == ("", "foo")
-    assert ident().parse("abc123") == ("", "abc123")
+def test_zero() -> None:
+    parser = zero()
+    assert parser.parse("test") == CustomError("Zero parser.", Span(0, 1))
 
 
-def test_take_while() -> None:
-    number_parser = take_while(lambda c: c.isnumeric())
+def test_fail() -> None:
+    parser = fail("Oh no.")
+    assert parser.parse("test") == CustomError("Oh no.", Span(0, 1))
 
-    assert number_parser.parse("10") == ("", "10")
-    assert number_parser.parse("10 not a number") == (" not a number", "10")
+
+def test_just() -> None:
+    parse_a = just("a")
+    assert parse_a.parse("a") == Result("", "a")
+    assert just("f").parse("foo") == Result("oo", "f")
+
+
+def test_one_of() -> None:
+    digits = one_of("123456789")
+    assert digits.parse("5") == Result("", "5")
+    assert digits.parse("0") == UnexpectedError("0", Span(0, 1))
+
+
+def test_none_of() -> None:
+    none = none_of("abc")
+    assert none.parse("x") == Result("", "x")
+    assert none.parse("a") == Error("Unexpected item.")
+
+
+def test_take_any() -> None:
+    parser = take_any()
+    assert parser.parse("a") == Result("", "a")
+
+
+def test_take() -> None:
+    parser = take(5)
+    assert parser.parse("hellotheworld") == Result("theworld", "hello")
+
+
+def test_satisfy() -> None:
+    def pred(i: str) -> bool:
+        return i.isdigit()
+
+    parser = satisfy(pred)
+    assert parser.parse("1") == Result("", "1")
+    assert parser.parse("1000") == Result("000", "1")
+
+
+def test_take_until() -> None:
+    parser = take_until("!")
+    assert parser.parse("hello!world") == Result("!world", "hello")
+
+    parser = take_until([1, 2])
+    assert parser.parse([[1, 2, 3], [1, 2], [1, 2, 3]]) == Result([[1, 2], [1, 2, 3]], [[1, 2, 3]])

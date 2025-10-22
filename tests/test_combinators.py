@@ -1,45 +1,52 @@
-from pint import ident, symbol, take_while
+from pint import Result
+from pint.parser import seq
+from pint.primitives import just, one_of
+from pint.text import just_str
 
 
 def test_map() -> None:
-    last_letter = ident().map_to(lambda x: x[-1])
-
-    assert last_letter.parse("hello") == ("", "o")
+    digits = one_of("0123456789").map(lambda i: int(i))
+    assert digits.parse("1") == Result("", 1)
 
 
 def test_then() -> None:
-    assign_parser = (
-        ident()
-        .padded_whitespace()
-        .then(symbol("=").padded_whitespace())
-        .then(take_while(lambda c: c.isalnum()).padded_whitespace())
-    )
-
-    assert assign_parser.parse("x = 10") == ("", (("x", "="), "10"))
+    a_and_num = just("a").then(one_of("0123456789"))
+    assert a_and_num.parse("a1") == Result("", ("a", "1"))
 
 
 def test_then_ignore() -> None:
-    name = take_while(lambda c: c.isalpha())
-    first_name = name.padded_whitespace().then_ignore(name)
-
-    assert first_name.parse("John Doe") == ("", "John")
+    ignore_underscore = one_of("0123456789").then_ignore(just("_"))
+    assert ignore_underscore.parse("2_") == Result("", "2")
 
 
 def test_ignore_then() -> None:
-    name = take_while(lambda c: c.isalpha())
-    last_name = name.padded_whitespace().ignore_then(name)
-
-    assert last_name.parse("John Doe") == ("", "Doe")
+    ignore_underscore = just("_").ignore_then(one_of("0123456789"))
+    assert ignore_underscore.parse("_2") == Result("", "2")
 
 
-def test_one_or_more() -> None:
-    multiple_a = symbol("a").one_or_more()
+def test_delimited() -> None:
+    delim_parens = one_of("0123456789").delimited(just("("), just(")"))
+    assert delim_parens.parse("(1)") == Result("", "1")
 
-    assert multiple_a.parse("aaaa") == ("", ["a", "a", "a", "a"])
+
+def test_alt() -> None:
+    underscore_or_number = just("_").alt(one_of("0123456789"))
+    assert underscore_or_number.parse("_") == Result("", "_")
+    assert underscore_or_number.parse("1") == Result("", "1")
+    operator = just("+").alt(just("-")).alt(just("*")).alt(just("/"))
+    assert operator.parse("*") == Result("", "*")
+    assert operator.parse("-") == Result("", "-")
+    assert operator.parse("/") == Result("", "/")
+    assert operator.parse("+") == Result("", "+")
 
 
-def test_zero_or_more() -> None:
-    any_a = symbol("a").zero_or_more()
+def test_seq() -> None:
+    parser = seq(just_str("hello"), just_str("and"), just_str("bye"))
+    assert parser.parse("helloandbye") == Result("", ["hello", "and", "bye"])
 
-    assert any_a.parse("aaaa") == ("", ["a", "a", "a", "a"])
-    assert any_a.parse("") == ("", [])
+
+def test_padded() -> None:
+    parser = just_str("test").padded(just("*"))
+    assert parser.parse("*test*") == Result("", "test")
+    assert parser.parse("*test") == Result("", "test")
+    assert parser.parse("test*") == Result("", "test")
