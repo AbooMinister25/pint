@@ -1,3 +1,3 @@
 # Pint
 
-A user-friendly parser combinator library for Python
+A user-friendly parser combinator library for Python.
